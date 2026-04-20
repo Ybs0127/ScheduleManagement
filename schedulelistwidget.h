@@ -36,7 +36,6 @@ private:
     QString defaultDateTitle() const;
 
     QLabel *m_titleLabel;
-    QLabel *m_subtitleLabel;
     QWidget *m_listContainer;
     QVBoxLayout *m_listLayout;
     QPushButton *m_addButton;

@@ -92,7 +92,6 @@ private:
 ScheduleListWidget::ScheduleListWidget(QWidget *parent)
     : QWidget(parent)
     , m_titleLabel(nullptr)
-    , m_subtitleLabel(nullptr)
     , m_listContainer(nullptr)
     , m_listLayout(nullptr)
     , m_addButton(nullptr)
@@ -138,8 +137,6 @@ void ScheduleListWidget::setupUi()
     m_titleLabel = new QLabel(card);
     m_titleLabel->setObjectName("SectionTitle");
 
-    m_subtitleLabel = new QLabel(tr("Your day list updates immediately when plans change."), card);
-    m_subtitleLabel->setObjectName("SectionSubtitle");
 
     auto *scrollArea = new QScrollArea(card);
     scrollArea->setWidgetResizable(true);
@@ -156,7 +153,6 @@ void ScheduleListWidget::setupUi()
     m_addButton->setObjectName("PrimaryButton");
 
     layout->addWidget(m_titleLabel);
-    layout->addWidget(m_subtitleLabel);
     layout->addWidget(scrollArea, 1);
     layout->addWidget(m_addButton);
 
@@ -168,7 +164,7 @@ void ScheduleListWidget::rebuildScheduleItems()
     clearListLayout();
 
     if (m_items.isEmpty()) {
-        auto *emptyState = new QLabel(tr("No schedules available for this view."), m_listContainer);
+        auto *emptyState = new QLabel(tr("현재 일정이 없습니다."), m_listContainer);
         emptyState->setObjectName("SectionSubtitle");
         emptyState->setWordWrap(true);
         m_listLayout->addWidget(emptyState);
@@ -192,8 +188,8 @@ void ScheduleListWidget::rebuildScheduleItems()
             card);
         metaLabel->setObjectName("ScheduleMeta");
 
-        auto *editButton = new QPushButton(tr("Edit"), card);
-        auto *deleteButton = new QPushButton(tr("Delete"), card);
+        auto *editButton = new QPushButton(tr("수정"), card);
+        auto *deleteButton = new QPushButton(tr("삭제"), card);
 
         topRow->addWidget(metaLabel, 1);
         topRow->addWidget(editButton);
@@ -204,9 +200,9 @@ void ScheduleListWidget::rebuildScheduleItems()
         titleLabel->setWordWrap(true);
 
         auto *descriptionLabel = new QLabel(
-            item.description.isEmpty() ? tr("No description") : item.description,
+            item.description.isEmpty() ? tr("메모 없음") : item.description,
             card);
-        descriptionLabel->setObjectName("ScheduleDescription");
+        descriptionLabel->setObjectName("일정 메모");
         descriptionLabel->setWordWrap(true);
 
         cardLayout->addLayout(topRow);
@@ -219,9 +215,8 @@ void ScheduleListWidget::rebuildScheduleItems()
         connect(deleteButton, &QPushButton::clicked, this, [this, item]() {
             const auto answer = QMessageBox::question(
                 this,
-                tr("Delete schedule"),
-                tr("Delete \"%1\" scheduled for %2 at %3?")
-                    .arg(item.title, item.date.toString("yyyy-MM-dd"), item.time.toString("HH:mm")));
+                tr("일정 삭제"),
+                tr("%1 %2에 있는 \"%3\" 일정을 삭제하시겠습니까?").arg(item.date.toString("yyyy-MM-dd"), item.time.toString("HH:mm"), item.title));
             if (answer == QMessageBox::Yes) {
                 emit scheduleDeleted(item.id);
             }
@@ -266,6 +261,6 @@ void ScheduleListWidget::clearListLayout()
 QString ScheduleListWidget::defaultDateTitle() const
 {
     return m_currentDate.isValid()
-        ? tr("Schedules for %1").arg(m_currentDate.toString("dddd, MMM d yyyy"))
+        ? tr("%1 일정").arg(m_currentDate.toString("M월 d일 dddd"))
         : tr("Schedules");
 }
