@@ -42,14 +42,16 @@ public:
         m_startDateTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
 
         // --- 종료 일시 (날짜 + 시간) ---
-        // 기본값으로 시작 일시로부터 1시간 후 설정
-        m_endDateTimeEdit = new QDateTimeEdit(startDT.addSecs(3600), this);
+        // ScheduleEditorDialog 생성자 내부 수정
+        m_endDateTimeEdit = new QDateTimeEdit(this);
+        if (m_item.endDateTime.isValid()) {
+            m_endDateTimeEdit->setDateTime(m_item.endDateTime);
+        } else {
+            // 값이 없을 때만 기본값(시작시간 + 1시간) 설정
+            m_endDateTimeEdit->setDateTime(startDT.addSecs(3600));
+        }
         m_endDateTimeEdit->setCalendarPopup(true);
         m_endDateTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
-
-        m_titleEdit = new QLineEdit(m_item.title, this);
-        m_descriptionEdit = new QPlainTextEdit(m_item.description, this);
-        m_descriptionEdit->setFixedHeight(80);
 
         // 폼 레이아웃에 추가
         formLayout->addRow(tr("시작 일시"), m_startDateTimeEdit);
@@ -67,13 +69,17 @@ public:
                 return;
             }
 
-            // 데이터 추출 및 저장
+            // 1. 시작 일시 저장
             m_item.date = m_startDateTimeEdit->date();
             m_item.time = m_startDateTimeEdit->time();
-            // m_item.endDateTime = m_endDateTimeEdit->dateTime(); // 구조체에 필드 추가 권장
 
+            // 2. 종료 일시 저장 (추가된 부분)
+            m_item.endDateTime = m_endDateTimeEdit->dateTime();
+
+            // 3. 기타 정보 저장
             m_item.title = m_titleEdit->text().trimmed();
             m_item.description = m_descriptionEdit->toPlainText().trimmed();
+
             accept();
         });
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -179,8 +185,14 @@ void ScheduleListWidget::rebuildScheduleItems()
 
         // 1. 첫 번째 줄: 일시 정보 (가로로 가득 채움)
         QString startStr = QDateTime(item.date, item.time).toString("yyyy-MM-dd HH:mm");
-        QString endStr = QDateTime(item.date, item.time).addSecs(3600).toString("HH:mm");
+
+        // 고정된 1시간 추가 대신, 저장된 종료 시간을 사용
+        QString endStr = item.endDateTime.isValid()
+                             ? item.endDateTime.toString("HH:mm")
+                             : QDateTime(item.date, item.time).addSecs(3600).toString("HH:mm");
+
         auto *metaLabel = new QLabel(QString("%1 ~ %2").arg(startStr, endStr), card);
+        metaLabel->setText(QString("%1 ~ %2").arg(startStr, endStr));
         metaLabel->setObjectName("ScheduleMeta");
         metaLabel->setStyleSheet("color: #666666; font-size: 11px;");
 
@@ -194,16 +206,16 @@ void ScheduleListWidget::rebuildScheduleItems()
         auto *buttonRow = new QHBoxLayout();
         buttonRow->setContentsMargins(0, 4, 0, 0); // 제목과의 간격
 
+        // rebuildScheduleItems 함수 내 버튼 설정 부분 수정
         auto *editButton = new QPushButton(tr("Edit"), card);
         auto *deleteButton = new QPushButton(tr("Delete"), card);
 
-        editButton->setFixedSize(60, 26);
-        deleteButton->setFixedSize(60, 26);
+        // 크기를 고정하는 대신 최소 크기를 지정하고, 사라지지 않게 정책 설정
+        editButton->setMinimumSize(60, 26);
+        deleteButton->setMinimumSize(70, 26); // Delete는 글자가 더 길어서 조금 더 넓게
 
-        // 버튼 스타일 (약간 더 큼직하게)
-        // QString btnStyle = "QPushButton { font-size: 11px; }";
-        // editButton->setStyleSheet(btnStyle);
-        // deleteButton->setStyleSheet(btnStyle);
+        editButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        deleteButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
 
         buttonRow->addStretch(); // 왼쪽을 밀어서 버튼들을 오른쪽으로 정렬
         buttonRow->addWidget(editButton);
