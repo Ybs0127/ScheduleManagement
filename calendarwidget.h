@@ -1,11 +1,12 @@
 #ifndef CALENDARWIDGET_H
 #define CALENDARWIDGET_H
 
+#include "scheduleitem.h"
+
 #include <QDate>
 #include <QWidget>
 
 class QCalendarWidget;
-class QComboBox;
 
 class CalendarWidget : public QWidget
 {
@@ -20,14 +21,11 @@ signals:
 
 public slots:
     void highlightDates(const QList<QDate> &dates);
+    void setSchedules(const QList<ScheduleItem> &items);
 
 private:
     void setupUi();
-    void syncSelectorsWithCalendar();
-    void updateCalendarPage();
 
-    QComboBox *m_monthCombo;
-    QComboBox *m_yearCombo;
     QCalendarWidget *m_calendar;
     QList<QDate> m_highlightedDates;
 };

@@ -352,6 +352,7 @@ void MainWindow::refreshScheduleList()
 
 void MainWindow::refreshCalendarHighlights()
 {
+    m_calendarWidget->setSchedules(m_schedules);
     m_calendarWidget->highlightDates(scheduledDates());
 }
 
