@@ -25,6 +25,7 @@ bool scheduleItemLessThan(const ScheduleItem &left, const ScheduleItem &right)
     return left.title.toLower() < right.title.toLower();
 }
 
+// 하이라이트된 달력 셀이 어떻게 렌더링하는지
 class ScheduleCalendarView : public QCalendarWidget
 {
 public:
@@ -37,14 +38,11 @@ public:
     {
         m_schedulesByDate.clear();
 
-        for (const ScheduleItem &item : items) {
+        for (const ScheduleItem &item : items)
             m_schedulesByDate[item.date].append(item);
-        }
 
-        for (auto it = m_schedulesByDate.begin(); it != m_schedulesByDate.end(); ++it) {
+        for (auto it = m_schedulesByDate.begin(); it != m_schedulesByDate.end(); ++it)
             std::sort(it.value().begin(), it.value().end(), scheduleItemLessThan);
-        }
-
         updateCells();
     }
 
@@ -59,17 +57,17 @@ protected:
         }
 
         painter->save();
-        painter->setClipRect(rect.adjusted(2, 18, -2, -2));
+        painter->setClipRect(rect.adjusted(2, 12, -2, -2));
 
         QFont textFont = painter->font();
         textFont.setPointSize(7);
         painter->setFont(textFont);
         painter->setPen(date == selectedDate() ? QColor("#ffffff") : QColor("#1f3d66"));
 
-        int y = rect.top() + 20;
+        int y = rect.top() + 12;
         const int left = rect.left() + 4;
         const int width = rect.width() - 8;
-        const int maxVisible = 2;
+        const int maxVisible = 4;
 
         for (int index = 0; index < schedules.size() && index < maxVisible; ++index) {
             const QString text = QString("%1 %2")
@@ -83,7 +81,7 @@ protected:
         if (schedules.size() > maxVisible) {
             painter->drawText(QRect(left, y, width, 10),
                               Qt::AlignLeft | Qt::AlignVCenter,
-                              QString("+%1 more").arg(schedules.size() - maxVisible));
+                              QString("+%1").arg(schedules.size() - maxVisible));
         }
 
         painter->restore();
@@ -155,11 +153,7 @@ void CalendarWidget::setupUi()
     auto *titleLabel = new QLabel(tr("Calendar"), card);
     titleLabel->setObjectName("SectionTitle");
 
-    auto *subtitleLabel = new QLabel(tr("Select a date and track which days already have plans."), card);
-    subtitleLabel->setObjectName("SectionSubtitle");
-
     titleBlock->addWidget(titleLabel);
-    titleBlock->addWidget(subtitleLabel);
 
     m_calendar = new ScheduleCalendarView(card);
     m_calendar->setGridVisible(false);

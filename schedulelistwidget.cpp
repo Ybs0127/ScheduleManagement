@@ -26,7 +26,7 @@ public:
         : QDialog(parent)
         , m_item(initialItem)
     {
-        setWindowTitle(m_item.id < 0 ? tr("Add schedule") : tr("Edit schedule"));
+        setWindowTitle(m_item.id < 0 ? tr("일정 추가") : tr("일정 수정"));
         resize(420, 280);
 
         auto *layout = new QVBoxLayout(this);
@@ -47,19 +47,21 @@ public:
         m_descriptionEdit->setPlaceholderText(tr("Optional notes"));
         m_descriptionEdit->setFixedHeight(96);
 
-        formLayout->addRow(tr("Date"), m_dateEdit);
-        formLayout->addRow(tr("Time"), m_timeEdit);
-        formLayout->addRow(tr("Title"), m_titleEdit);
-        formLayout->addRow(tr("Description"), m_descriptionEdit);
-
+        formLayout->addRow(tr("날짜"), m_dateEdit);
+        formLayout->addRow(tr("시작 시각"), m_timeEdit);
+        formLayout->addRow(tr("제목"), m_titleEdit);
+        formLayout->addRow(tr("메모"), m_descriptionEdit);
         auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
+        buttons->button(QDialogButtonBox::Save)->setText(tr("저장"));
+        buttons->button(QDialogButtonBox::Cancel)->setText(tr("취소"));
+
 
         layout->addLayout(formLayout);
         layout->addWidget(buttons);
 
         connect(buttons, &QDialogButtonBox::accepted, this, [this]() {
             if (m_titleEdit->text().trimmed().isEmpty()) {
-                QMessageBox::warning(this, tr("Missing title"), tr("Please enter a schedule title."));
+                QMessageBox::warning(this, tr("제목이 없습니다."), tr("일정 제목을 입력해주세요."));
                 return;
             }
 
