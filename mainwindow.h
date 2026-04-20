@@ -9,7 +9,6 @@
 
 class CalendarWidget;
 class ScheduleListWidget;
-class TopToolbarWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -31,6 +30,7 @@ private slots:
 
 private:
     void setupUi();
+    void setupMenuBar();
     void setupConnections();
     void applyStyles();
     void refreshScheduleList();
@@ -42,7 +42,6 @@ private:
     bool importFromJson(const QString &filePath);
     int generateScheduleId();
 
-    TopToolbarWidget *m_topToolbarWidget;
     ScheduleListWidget *m_scheduleListWidget;
     CalendarWidget *m_calendarWidget;
     QList<ScheduleItem> m_schedules;

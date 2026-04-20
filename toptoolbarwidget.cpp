@@ -3,7 +3,6 @@
 #include <QAction>
 #include <QFrame>
 #include <QHBoxLayout>
-#include <QLabel>
 #include <QLineEdit>
 #include <QMenu>
 #include <QPushButton>
@@ -32,33 +31,20 @@ void TopToolbarWidget::setupUi()
     layout->setContentsMargins(18, 16, 18, 16);
     layout->setSpacing(12);
 
-    auto *titleLayout = new QVBoxLayout();
-    titleLayout->setSpacing(2);
-
-    auto *titleLabel = new QLabel(tr("Planner Console"), card);
-    titleLabel->setObjectName("SectionTitle");
-
-    auto *subtitleLabel = new QLabel(tr("Search, import, export, and manage your schedule flow."), card);
-    subtitleLabel->setObjectName("SectionSubtitle");
-
-    titleLayout->addWidget(titleLabel);
-    titleLayout->addWidget(subtitleLabel);
-    layout->addLayout(titleLayout, 1);
-
     m_searchEdit = new QLineEdit(card);
-    m_searchEdit->setPlaceholderText(tr("Search schedules by title or description"));
+    m_searchEdit->setPlaceholderText(tr("검색"));
     m_searchEdit->setClearButtonEnabled(true);
     m_searchEdit->setMinimumWidth(280);
 
-    m_settingsButton = new QPushButton(tr("Settings"), card);
-    m_importButton = new QPushButton(tr("Import Config"), card);
-    m_exportButton = new QPushButton(tr("Export"), card);
+    m_settingsButton = new QPushButton(tr("설정"), card);
+    m_importButton = new QPushButton(tr("일정 불러오기"), card);
+    m_exportButton = new QPushButton(tr("일정 내보내기"), card);
 
     auto *exportMenu = new QMenu(m_exportButton);
     const QList<QPair<QString, QString>> exportOptions = {
-        {tr("Export CSV"), QStringLiteral("csv")},
-        {tr("Export PDF"), QStringLiteral("pdf")},
-        {tr("Export Image"), QStringLiteral("image")},
+        {tr("CSV로 내보내기"), QStringLiteral("csv")},
+        {tr("json으로 내보내기"), QStringLiteral("json")},
+        {tr("Image로 내보내기"), QStringLiteral("image")},
     };
 
     for (const auto &option : exportOptions) {
@@ -71,7 +57,7 @@ void TopToolbarWidget::setupUi()
 
     m_exportButton->setMenu(exportMenu);
 
-    layout->addWidget(m_searchEdit);
+    layout->addWidget(m_searchEdit, 1);
     layout->addWidget(m_importButton);
     layout->addWidget(m_exportButton);
     layout->addWidget(m_settingsButton);

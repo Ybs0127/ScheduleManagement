@@ -5,7 +5,9 @@
 #include <QDate>
 #include <QFrame>
 #include <QHash>
+#include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPainter>
 #include <QSignalBlocker>
 #include <QTextCharFormat>
@@ -96,6 +98,7 @@ private:
 CalendarWidget::CalendarWidget(QWidget *parent)
     : QWidget(parent)
     , m_calendar(nullptr)
+    , m_searchEdit(nullptr)
 {
     setupUi();
 }
@@ -147,13 +150,20 @@ void CalendarWidget::setupUi()
     layout->setContentsMargins(18, 18, 18, 18);
     layout->setSpacing(16);
 
-    auto *titleBlock = new QVBoxLayout();
-    titleBlock->setSpacing(2);
+    auto *headerLayout = new QHBoxLayout();
+    headerLayout->setSpacing(12);
 
     auto *titleLabel = new QLabel(tr("Calendar"), card);
     titleLabel->setObjectName("SectionTitle");
 
-    titleBlock->addWidget(titleLabel);
+    m_searchEdit = new QLineEdit(card);
+    m_searchEdit->setPlaceholderText(tr("검색"));
+    m_searchEdit->setClearButtonEnabled(true);
+    m_searchEdit->setMaximumWidth(220);
+
+    headerLayout->addWidget(titleLabel);
+    headerLayout->addStretch();
+    headerLayout->addWidget(m_searchEdit, 0, Qt::AlignRight);
 
     m_calendar = new ScheduleCalendarView(card);
     m_calendar->setGridVisible(false);
@@ -161,10 +171,11 @@ void CalendarWidget::setupUi()
     m_calendar->setSelectedDate(QDate::currentDate());
     m_calendar->setMinimumHeight(520);
 
-    layout->addLayout(titleBlock);
+    layout->addLayout(headerLayout);
     layout->addWidget(m_calendar, 1);
 
     connect(m_calendar, &QCalendarWidget::selectionChanged, this, [this]() {
         emit dateSelected(m_calendar->selectedDate());
     });
+    connect(m_searchEdit, &QLineEdit::textChanged, this, &CalendarWidget::searchRequested);
 }

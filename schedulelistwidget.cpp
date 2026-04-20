@@ -9,6 +9,7 @@
 #include <QLabel>
 #include <QLayoutItem>
 #include <QLineEdit>
+#include <QLocale>
 #include <QMessageBox>
 #include <QPlainTextEdit>
 #include <QPushButton>
@@ -149,7 +150,7 @@ void ScheduleListWidget::setupUi()
 
     scrollArea->setWidget(m_listContainer);
 
-    m_addButton = new QPushButton(tr("+ Manual Add"), card);
+    m_addButton = new QPushButton(tr("+ 일정 추가"), card);
     m_addButton->setObjectName("PrimaryButton");
 
     layout->addWidget(m_titleLabel);
@@ -202,7 +203,7 @@ void ScheduleListWidget::rebuildScheduleItems()
         auto *descriptionLabel = new QLabel(
             item.description.isEmpty() ? tr("메모 없음") : item.description,
             card);
-        descriptionLabel->setObjectName("일정 메모");
+        descriptionLabel->setObjectName("ScheduleDescription");
         descriptionLabel->setWordWrap(true);
 
         cardLayout->addLayout(topRow);
@@ -261,6 +262,6 @@ void ScheduleListWidget::clearListLayout()
 QString ScheduleListWidget::defaultDateTitle() const
 {
     return m_currentDate.isValid()
-        ? tr("%1 일정").arg(m_currentDate.toString("M월 d일 dddd"))
+        ? tr("%1 일정").arg(QLocale().toString(m_currentDate, "M월 d일 dddd"))
         : tr("Schedules");
 }

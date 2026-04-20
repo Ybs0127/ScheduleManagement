@@ -2,8 +2,8 @@
 
 #include "calendarwidget.h"
 #include "schedulelistwidget.h"
-#include "toptoolbarwidget.h"
 
+#include <QAction>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -13,6 +13,8 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMessageBox>
+#include <QMenu>
+#include <QMenuBar>
 #include <QSaveFile>
 #include <QSet>
 #include <QTextStream>
@@ -45,13 +47,13 @@ bool scheduleLessThan(const ScheduleItem &left, const ScheduleItem &right)
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , m_topToolbarWidget(nullptr)
     , m_scheduleListWidget(nullptr)
     , m_calendarWidget(nullptr)
     , m_selectedDate(QDate::currentDate())
     , m_nextScheduleId(1)
 {
     setupUi();
+    setupMenuBar();
     setupConnections();
     applyStyles();
     refreshScheduleList();
@@ -175,7 +177,6 @@ void MainWindow::setupUi()
     mainLayout->setContentsMargins(24, 24, 24, 24);
     mainLayout->setSpacing(18);
 
-    m_topToolbarWidget = new TopToolbarWidget(central);
     m_scheduleListWidget = new ScheduleListWidget(central);
     m_calendarWidget = new CalendarWidget(central);
 
@@ -187,21 +188,38 @@ void MainWindow::setupUi()
     m_scheduleListWidget->setFixedWidth(300);
     m_calendarWidget->setMinimumWidth(500);
 
-    mainLayout->addWidget(m_topToolbarWidget);
     mainLayout->addLayout(contentLayout, 1);
+}
+
+void MainWindow::setupMenuBar()
+{
+    menuBar()->clear();
+
+    QMenu *settingsMenu = menuBar()->addMenu(tr("설정"));
+    QMenu *importMenu = menuBar()->addMenu(tr("일정 불러오기"));
+    QMenu *exportMenu = menuBar()->addMenu(tr("일정 내보내기"));
+
+    QAction *settingsAction = settingsMenu->addAction(tr("환경설정"));
+    QAction *importAction = importMenu->addAction(tr("JSON 불러오기"));
+    QAction *exportCsvAction = exportMenu->addAction(tr("CSV로 내보내기"));
+    QAction *exportPdfAction = exportMenu->addAction(tr("PDF로 내보내기"));
+    QAction *exportImageAction = exportMenu->addAction(tr("이미지로 내보내기"));
+
+    connect(settingsAction, &QAction::triggered, this, &MainWindow::handleSettingsRequested);
+    connect(importAction, &QAction::triggered, this, &MainWindow::handleImportRequested);
+    connect(exportCsvAction, &QAction::triggered, this, [this]() {
+        handleExportRequested(QStringLiteral("csv"));
+    });
+    connect(exportPdfAction, &QAction::triggered, this, [this]() {
+        handleExportRequested(QStringLiteral("pdf"));
+    });
+    connect(exportImageAction, &QAction::triggered, this, [this]() {
+        handleExportRequested(QStringLiteral("image"));
+    });
 }
 
 void MainWindow::setupConnections()
 {
-    connect(m_topToolbarWidget, &TopToolbarWidget::searchRequested,
-            this, &MainWindow::handleSearchRequested);
-    connect(m_topToolbarWidget, &TopToolbarWidget::exportRequested,
-            this, &MainWindow::handleExportRequested);
-    connect(m_topToolbarWidget, &TopToolbarWidget::importRequested,
-            this, &MainWindow::handleImportRequested);
-    connect(m_topToolbarWidget, &TopToolbarWidget::settingsRequested,
-            this, &MainWindow::handleSettingsRequested);
-
     connect(m_scheduleListWidget, &ScheduleListWidget::scheduleAdded,
             this, &MainWindow::handleScheduleAdded);
     connect(m_scheduleListWidget, &ScheduleListWidget::scheduleUpdated,
@@ -211,6 +229,8 @@ void MainWindow::setupConnections()
 
     connect(m_calendarWidget, &CalendarWidget::dateSelected,
             this, &MainWindow::handleDateSelected);
+    connect(m_calendarWidget, &CalendarWidget::searchRequested,
+            this, &MainWindow::handleSearchRequested);
 }
 
 void MainWindow::applyStyles()
