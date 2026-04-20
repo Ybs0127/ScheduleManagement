@@ -1,13 +1,15 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "scheduleitem.h"
+
+#include <QDate>
+#include <QList>
 #include <QMainWindow>
 
-QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
-}
-QT_END_NAMESPACE
+class CalendarWidget;
+class ScheduleListWidget;
+class TopToolbarWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -15,9 +17,38 @@ class MainWindow : public QMainWindow
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override;
+    ~MainWindow() override = default;
+
+private slots:
+    void handleDateSelected(const QDate &date);
+    void handleScheduleAdded(const ScheduleItem &item);
+    void handleScheduleUpdated(const ScheduleItem &item);
+    void handleScheduleDeleted(int id);
+    void handleSearchRequested(const QString &keyword);
+    void handleExportRequested(const QString &format);
+    void handleImportRequested();
+    void handleSettingsRequested();
 
 private:
-    Ui::MainWindow *ui;
+    void setupUi();
+    void setupConnections();
+    void applyStyles();
+    void refreshScheduleList();
+    void refreshCalendarHighlights();
+    QList<ScheduleItem> schedulesForSelectedDate() const;
+    QList<ScheduleItem> schedulesMatchingKeyword(const QString &keyword) const;
+    QList<QDate> scheduledDates() const;
+    bool exportAsCsv(const QString &filePath) const;
+    bool importFromJson(const QString &filePath);
+    int generateScheduleId();
+
+    TopToolbarWidget *m_topToolbarWidget;
+    ScheduleListWidget *m_scheduleListWidget;
+    CalendarWidget *m_calendarWidget;
+    QList<ScheduleItem> m_schedules;
+    QDate m_selectedDate;
+    QString m_searchKeyword;
+    int m_nextScheduleId;
 };
+
 #endif // MAINWINDOW_H
