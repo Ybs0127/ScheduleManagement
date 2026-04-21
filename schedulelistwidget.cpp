@@ -35,18 +35,23 @@ public:
         formLayout->setLabelAlignment(Qt::AlignLeft);
         formLayout->setFormAlignment(Qt::AlignTop);
 
-        // --- 시작 일시 (날짜 + 시간) ---
-        // 기존 item.date와 item.time을 합쳐서 QDateTime 생성
+        // --- 시작 일시 ---
         QDateTime startDT(m_item.date, m_item.time);
         if (!startDT.isValid()) startDT = QDateTime::currentDateTime();
 
         m_startDateTimeEdit = new QDateTimeEdit(startDT, this);
-        m_startDateTimeEdit->setCalendarPopup(true); // 달력 팝업 사용
+        m_startDateTimeEdit->setCalendarPopup(true);
         m_startDateTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
+
+        // --- 종료 일시 (여기서 초기화!) ---
+        QDateTime endDT = m_item.endDateTime;
+        if (!endDT.isValid()) {
+            endDT = startDT.addSecs(3600); // 값이 없으면 1시간 후로
+        }
 
         // --- 종료 일시 (날짜 + 시간) ---
         // 기본값으로 시작 일시로부터 1시간 후 설정
-        m_endDateTimeEdit = new QDateTimeEdit(startDT.addSecs(3600), this);
+        m_endDateTimeEdit = new QDateTimeEdit(endDT, this);
         m_endDateTimeEdit->setCalendarPopup(true);
         m_endDateTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
 
@@ -74,16 +79,17 @@ public:
                 return;
             }
 
-            // 1. 시작 일시 저장
+            // 1. 시작 정보 저장
             m_item.date = m_startDateTimeEdit->date();
             m_item.time = m_startDateTimeEdit->time();
 
-            // 2. 종료 일시 저장 (추가된 부분)
+            // 2. 종료 정보 저장 (입력창에서 날짜/시간 통째로 긁어오기)
             m_item.endDateTime = m_endDateTimeEdit->dateTime();
 
-            // 3. 기타 정보 저장
+            // 3. 기타 정보
             m_item.title = m_titleEdit->text().trimmed();
             m_item.description = m_descriptionEdit->toPlainText().trimmed();
+
             accept();
         });
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -223,11 +229,11 @@ void ScheduleListWidget::rebuildScheduleItems()
         editButton->setMinimumSize(60, 26);
         deleteButton->setMinimumSize(70, 26); // Delete는 글자가 더 길어서 조금 더 넓게
 
-        auto *descriptionLabel = new QLabel(
-            item.description.isEmpty() ? tr("메모 없음") : item.description,
-            card);
-        descriptionLabel->setObjectName("ScheduleDescription");
-        descriptionLabel->setWordWrap(true);
+        // auto *descriptionLabel = new QLabel(
+        //     item.description.isEmpty() ? tr("메모 없음") : item.description,
+        //     card);
+        // descriptionLabel->setObjectName("ScheduleDescription");
+        // descriptionLabel->setWordWrap(true);
 
         buttonRow->addStretch(); // 왼쪽을 밀어서 버튼들을 오른쪽으로 정렬
         buttonRow->addWidget(editButton);
