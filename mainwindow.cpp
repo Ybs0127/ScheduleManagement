@@ -352,15 +352,22 @@ void MainWindow::applyStyles()
             alternate-background-color: #ffffff;
         }
         QCalendarWidget QToolButton {
-            background: #eef4ff;
-            border: 1px solid #d4deea;
-            border-radius: 10px;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 8px;
             color: #223046;
             padding: 6px 10px;
-            margin: 2px;
+            margin: 2px 12px;
         }
         QCalendarWidget QToolButton:hover {
             background: #dbe9ff;
+            border: 1px solid #bfd4f8;
+        }
+        QCalendarWidget QToolButton:menu-indicator {
+            image: none;
+            background: transparent;
+            subcontrol-position: right center;
+            subcontrol-origin: padding;
         }
         QCalendarWidget QMenu {
             background: #ffffff;

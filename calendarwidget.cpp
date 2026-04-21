@@ -8,9 +8,11 @@
 #include <QHBoxLayout>
 #include <QLabel>
 #include <QLineEdit>
+#include <QLayoutItem>
 #include <QPainter>
 #include <QSignalBlocker>
 #include <QTextCharFormat>
+#include <QToolButton>
 #include <QVBoxLayout>
 #include <QFont>
 #include <algorithm>
@@ -25,6 +27,37 @@ bool scheduleItemLessThan(const ScheduleItem &left, const ScheduleItem &right)
     }
 
     return left.title.toLower() < right.title.toLower();
+}
+
+void arrangeCalendarNavigation(QCalendarWidget *calendar)
+{
+    if (!calendar) {
+        return;
+    }
+
+    QWidget *navigationBar = calendar->findChild<QWidget *>(QStringLiteral("qt_calendar_navigationbar"));
+    auto *navigationLayout = navigationBar ? qobject_cast<QHBoxLayout *>(navigationBar->layout()) : nullptr;
+    auto *prevButton = calendar->findChild<QToolButton *>(QStringLiteral("qt_calendar_prevmonth"));
+    auto *nextButton = calendar->findChild<QToolButton *>(QStringLiteral("qt_calendar_nextmonth"));
+    auto *monthButton = calendar->findChild<QToolButton *>(QStringLiteral("qt_calendar_monthbutton"));
+    auto *yearButton = calendar->findChild<QToolButton *>(QStringLiteral("qt_calendar_yearbutton"));
+
+    if (!navigationLayout || !prevButton || !nextButton || !monthButton || !yearButton) {
+        return;
+    }
+
+    while (QLayoutItem *item = navigationLayout->takeAt(0)) {
+        delete item;
+    }
+
+    navigationLayout->setContentsMargins(0, 0, 0, 0);
+    navigationLayout->setSpacing(6);
+    navigationLayout->addStretch();
+    navigationLayout->addWidget(prevButton);
+    navigationLayout->addWidget(yearButton);
+    navigationLayout->addWidget(monthButton);
+    navigationLayout->addWidget(nextButton);
+    navigationLayout->addStretch();
 }
 
 // 하이라이트된 달력 셀이 어떻게 렌더링하는지
@@ -157,8 +190,11 @@ void CalendarWidget::setupUi()
 
     m_searchEdit = new QLineEdit(card);
     m_searchEdit->setPlaceholderText(tr("일정 검색"));
+    QAction *searchIconAction = m_searchEdit->addAction(QIcon::fromTheme("edit-find"),
+                                                        QLineEdit::LeadingPosition);
+    searchIconAction->setEnabled(true);
     m_searchEdit->setClearButtonEnabled(true);
-    m_searchEdit->setMaximumWidth(240);
+    m_searchEdit->setMaximumWidth(600);
 
     headerLayout->addWidget(titleLabel);
     headerLayout->addStretch();
@@ -169,6 +205,7 @@ void CalendarWidget::setupUi()
     m_calendar->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
     m_calendar->setSelectedDate(QDate::currentDate());
     m_calendar->setMinimumHeight(520);
+    arrangeCalendarNavigation(m_calendar);
 
     layout->addLayout(headerLayout);
     layout->addWidget(m_calendar, 1);
