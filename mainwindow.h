@@ -39,6 +39,7 @@ private:
     QList<ScheduleItem> schedulesMatchingKeyword(const QString &keyword) const;
     QList<QDate> scheduledDates() const;
     bool exportAsCsv(const QString &filePath) const;
+    bool exportAsJson(const QString &filePath) const;
     bool importFromJson(const QString &filePath);
     int generateScheduleId();
 

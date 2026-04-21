@@ -131,7 +131,6 @@ void CalendarWidget::highlightDates(const QList<QDate> &dates)
         m_calendar->setDateTextFormat(date, format);
     }
 }
-
 void CalendarWidget::setSchedules(const QList<ScheduleItem> &items)
 {
     static_cast<ScheduleCalendarView *>(m_calendar)->setSchedules(items);
@@ -157,9 +156,9 @@ void CalendarWidget::setupUi()
     titleLabel->setObjectName("SectionTitle");
 
     m_searchEdit = new QLineEdit(card);
-    m_searchEdit->setPlaceholderText(tr("검색"));
+    m_searchEdit->setPlaceholderText(tr("일정 검색"));
     m_searchEdit->setClearButtonEnabled(true);
-    m_searchEdit->setMaximumWidth(220);
+    m_searchEdit->setMaximumWidth(240);
 
     headerLayout->addWidget(titleLabel);
     headerLayout->addStretch();
