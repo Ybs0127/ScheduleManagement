@@ -1,8 +1,7 @@
 #include "mainwindow.h"
-
 #include "calendarwidget.h"
 #include "schedulelistwidget.h"
-
+#include "settingsdialog.h"
 #include <QAction>
 #include <QDateTime>
 #include <QDir>
@@ -28,20 +27,6 @@
 #include <QLabel>
 #include <QIcon>
 #include <QMovie>
-
-class AnimatedIconLabel : public QLabel {
-public:
-    explicit AnimatedIconLabel(const QString &gifPath, QWidget *parent = nullptr) : QLabel(parent) {
-        m_movie = new QMovie(gifPath, QByteArray(), this);
-        setMovie(m_movie);
-        m_movie->jumpToFrame(0); // 처음엔 정지 상태
-    }
-protected:
-    void enterEvent(QEnterEvent *event) override { m_movie->start(); QLabel::enterEvent(event); }
-    void leaveEvent(QEvent *event) override { m_movie->stop(); m_movie->jumpToFrame(0); QLabel::leaveEvent(event); }
-private:
-    QMovie *m_movie;
-};
 
 namespace {
 QString csvEscaped(const QString &value)
@@ -213,16 +198,33 @@ void MainWindow::handleImportRequested()
 
 void MainWindow::handleSettingsRequested()
 {
-
+    // 1. 설정값 불러오기
     QSettings settings("MyCompany", "ScheduleManagement");
-
-    int currentMax = settings.value("calendar/maxVisible", 3).toInt();
+    int currentMax = settings.value("calendar/maxVisible", 4).toInt();
     bool currentWarn = settings.value("data/warnOnEmptyImport", true).toBool();
 
+    // 2. 다이얼로그 생성 및 현재 값 세팅
+    SettingsDialog dlg(this);
+    dlg.setMaxVisible(currentMax);
+    dlg.setWarnOnEmpty(currentWarn);
+
+    // 3. 실행 및 결과 반영
+    if (dlg.exec() == QDialog::Accepted) {
+        // 값 저장
+        settings.setValue("calendar/maxVisible", dlg.maxVisible());
+        settings.setValue("data/warnOnEmptyImport", dlg.warnOnEmpty());
+
+        // 즉시 반영이 필요한 경우 알림
+        QMessageBox::information(this, tr("설정 저장"), tr("설정이 저장되었습니다.\n일부 설정은 재시작 후 적용될 수 있습니다."));
+
+        // UI 즉시 갱신이 필요하다면 호출
+        refreshCalendarHighlights();
+    }
 }
 
 void MainWindow::setupUi()
 {
+
     setWindowIcon(QIcon(":/resources/calander.gif"));
     setWindowTitle(tr("스케줄러"));
     resize(1240, 760);
@@ -256,18 +258,20 @@ void MainWindow::setupMenuBar()
     menuBar()->clear();
 
     QMenu *settingsMenu = menuBar()->addMenu(tr("설정"));
-    QMenu *moreMenu = menuBar()->addMenu("더보기");
     QMenu *importMenu = menuBar()->addMenu(tr("불러오기"));
     QMenu *exportMenu = menuBar()->addMenu(tr("내보내기"));
+    QMenu *moreMenu = menuBar()->addMenu("더보기");
 
     QAction *settingsAction = settingsMenu->addAction(tr("환경설정"));
-    QAction *quitApp = settingsMenu->addAction(tr("종료"));
+    QAction *resetAction = settingsMenu->addAction(tr("일정 초기화"));
     QAction *importAction = importMenu->addAction(tr("JSON 불러오기"));
     QAction *exportCsvAction = exportMenu->addAction(tr("CSV로 내보내기"));
     QAction *exportJsonAction = exportMenu->addAction(tr("json으로 내보내기"));
+    QAction *quitApp = moreMenu->addAction(tr("종료"));
+
     // 종료 액션 연결 (애플리케이션 종료)
     connect(quitApp, &QAction::triggered, this, &MainWindow::handleQuitRequested);
-
+    connect(resetAction, &QAction::triggered, this, &MainWindow::handleResetRequested);
     connect(settingsAction, &QAction::triggered, this, &MainWindow::handleSettingsRequested);
     connect(importAction, &QAction::triggered, this, &MainWindow::handleImportRequested);
     connect(exportCsvAction, &QAction::triggered, this, [this]() {
@@ -295,128 +299,15 @@ void MainWindow::setupConnections()
 
 void MainWindow::applyStyles()
 {
-    setStyleSheet(R"(
-        QWidget#AppBackground {
-            background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                                        stop:0 #f5f7fb, stop:1 #edf2f9);
-        }
-        QFrame[card="true"] {
-            background-color: #ffffff;
-            border: 1px solid #dbe3ee;
-            border-radius: 18px;
-        }
-        QLabel#SectionTitle {
-            color: #223046;
-            font-size: 20px;
-            font-weight: 700;
-        }
-        QLabel#SectionSubtitle {
-            color: #6f7f95;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        QLineEdit,
-        QComboBox,
-        QDateEdit,
-        QTimeEdit,
-        QPlainTextEdit {
-            background: #f8fafc;
-            border: 1px solid #d4deea;
-            border-radius: 12px;
-            padding: 10px 12px;
-            color: #223046;
-        }
-        QLineEdit:focus,
-        QComboBox:focus,
-        QDateEdit:focus,
-        QTimeEdit:focus,
-        QPlainTextEdit:focus {
-            border: 1px solid #4e89ff;
-            background: #ffffff;
-        }
-        QPushButton {
-            background: #eef4ff;
-            border: 1px solid #d4deea;
-            border-radius: 12px;
-            color: #1f3d66;
-            padding: 10px 14px;
-            font-weight: 600;
-        }
-        QPushButton:hover {
-            background: #dbe9ff;
-            border-color: #bfd4f8;
-        }
-        QPushButton#PrimaryButton {
-            background: #2d6cf6;
-            color: white;
-            border-color: #2d6cf6;
-        }
-        QPushButton#PrimaryButton:hover {
-            background: #1f5ce0;
-            border-color: #1f5ce0;
-        }
-        QScrollArea {
-            border: none;
-            background: transparent;
-        }
-        QWidget#ScheduleRowCard {
-            background: #f9fbfe;
-            border: 1px solid #dce5f1;
-            border-radius: 16px;
-        }
-        QWidget#ScheduleRowCard:hover {
-            background: #f1f6ff;
-            border-color: #bfd4f8;
-        }
-        QLabel#ScheduleTitle {
-            color: #223046;
-            font-size: 15px;
-            font-weight: 700;
-        }
-        QLabel#ScheduleMeta,
-        QLabel#ScheduleDescription {
-            color: #6f7f95;
-            font-size: 12px;
-        }
-        QCalendarWidget QWidget {
-            alternate-background-color: #ffffff;
-        }
-        QCalendarWidget QToolButton {
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 8px;
-            color: #223046;
-            padding: 6px 10px;
-            margin: 2px 12px;
-        }
-        QCalendarWidget QToolButton:hover {
-            background: #dbe9ff;
-            border: 1px solid #bfd4f8;
-        }
-        QCalendarWidget QToolButton:menu-indicator {
-            image: none;
-            background: transparent;
-            subcontrol-position: right center;
-            subcontrol-origin: padding;
-        }
-        QCalendarWidget QMenu {
-            background: #ffffff;
-            border: 1px solid #d4deea;
-        }
-        QCalendarWidget QSpinBox {
-            background: #f8fafc;
-            border: 1px solid #d4deea;
-            border-radius: 8px;
-            padding: 4px 8px;
-        }
-        QCalendarWidget QAbstractItemView {
-            background: #ffffff;
-            selection-background-color: #2d6cf6;
-            selection-color: #ffffff;
-            outline: 0;
-            border: none;
-        }
-    )");
+    QFile file(":/style.qss");
+
+    if (file.open(QFile::ReadOnly | QFile::Text)) {
+        QTextStream stream(&file);
+        this->setStyleSheet(stream.readAll());
+        file.close();
+    } else {
+        qDebug() << "스타일 시트 파일을 열 수 없습니다!";
+    }
 }
 
 void MainWindow::refreshScheduleList()
@@ -576,10 +467,9 @@ bool MainWindow::importFromJson(const QString &filePath)
     }
 
     if (schedulesArray.isEmpty()) {
-        QSettings settings("MyCompany", "스케줄러");
+        QSettings settings("MyCompany", "ScheduleManagement");
         bool shouldWarn = settings.value("data/warnOnEmptyImport", true).toBool();
-
-        if (shouldWarn) {
+        if (settings.value("data/warnOnEmptyImport", true).toBool()) {
             QMessageBox::warning(this, tr("가져오기 경고"), tr("가져올 일정 데이터가 없습니다."));
         }
         return false;
@@ -643,15 +533,7 @@ int MainWindow::generateScheduleId()
 }
 void MainWindow::handleQuitRequested()
 {
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this,
-                                  tr("종료 확인"),
-                                  tr("프로그램을 종료하시겠습니까?\n저장되지 않은 변경사항은 사라질 수 있습니다."),
-                                  QMessageBox::Yes | QMessageBox::No);
-
-    if (reply == QMessageBox::Yes) {
-        qApp->quit();
-    }
+    this->close();
 }
 void MainWindow::closeEvent(QCloseEvent *event)
 {
@@ -664,5 +546,28 @@ void MainWindow::closeEvent(QCloseEvent *event)
         event->accept();
     } else {
         event->ignore();
+    }
+}
+void MainWindow::handleResetRequested()
+{
+    // 1. 사용자 확인 (실수 방지)
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, tr("일정 초기화"),
+                                  tr("모든 일정이 영구적으로 삭제됩니다. 계속하시겠습니까?"),
+                                  QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        // 2. 메모리 데이터 비우기
+        m_schedules.clear();
+        m_nextScheduleId = 1; // ID도 초기화
+
+        // 3. 파일 저장 (빈 상태로 덮어쓰기)
+        saveToDefaultStorage();
+
+        // 4. UI 갱신
+        refreshScheduleList();
+        refreshCalendarHighlights();
+
+        QMessageBox::information(this, tr("완료"), tr("모든 일정이 초기화되었습니다."));
     }
 }

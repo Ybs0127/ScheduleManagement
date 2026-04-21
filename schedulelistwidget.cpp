@@ -202,6 +202,7 @@ void ScheduleListWidget::setupUi()
 
     m_titleLabel = new QLabel(card);
     m_titleLabel->setObjectName("SectionTitle");
+    m_titleLabel->setText(defaultDateTitle());
 
 
     auto *scrollArea = new QScrollArea(card);

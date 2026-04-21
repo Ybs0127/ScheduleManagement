@@ -29,6 +29,9 @@ if(QT_VERSION_MAJOR EQUAL 6)
         MACOSX_BUNDLE
         ${PROJECT_SOURCES}
         resources.qrc
+        settingsdialog.cpp
+        settingsdialog.h
+
     )
 else()
     add_executable(ScheduleManagement

@@ -29,6 +29,8 @@ private slots:
     void handleExportRequested(const QString &format);
     void handleImportRequested();
     void handleSettingsRequested();
+    void handleQuitRequested();
+    void handleResetRequested();
 
 private:
     void setupUi();
@@ -47,7 +49,7 @@ private:
     bool saveToDefaultStorage() const;
     bool loadFromDefaultStorage();
     int generateScheduleId();
-    void handleQuitRequested();
+
 
     ScheduleListWidget *m_scheduleListWidget;
     CalendarWidget *m_calendarWidget;
