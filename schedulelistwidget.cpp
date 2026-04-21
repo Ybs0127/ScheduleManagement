@@ -42,16 +42,14 @@ public:
         m_startDateTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
 
         // --- 종료 일시 (날짜 + 시간) ---
-        // ScheduleEditorDialog 생성자 내부 수정
-        m_endDateTimeEdit = new QDateTimeEdit(this);
-        if (m_item.endDateTime.isValid()) {
-            m_endDateTimeEdit->setDateTime(m_item.endDateTime);
-        } else {
-            // 값이 없을 때만 기본값(시작시간 + 1시간) 설정
-            m_endDateTimeEdit->setDateTime(startDT.addSecs(3600));
-        }
+        // 기본값으로 시작 일시로부터 1시간 후 설정
+        m_endDateTimeEdit = new QDateTimeEdit(startDT.addSecs(3600), this);
         m_endDateTimeEdit->setCalendarPopup(true);
         m_endDateTimeEdit->setDisplayFormat("yyyy-MM-dd HH:mm");
+
+        m_titleEdit = new QLineEdit(m_item.title, this);
+        m_descriptionEdit = new QPlainTextEdit(m_item.description, this);
+        m_descriptionEdit->setFixedHeight(80);
 
         // 폼 레이아웃에 추가
         formLayout->addRow(tr("시작 일시"), m_startDateTimeEdit);
