@@ -28,6 +28,7 @@ if(QT_VERSION_MAJOR EQUAL 6)
         WIN32
         MACOSX_BUNDLE
         ${PROJECT_SOURCES}
+        resources.qrc
     )
 else()
     add_executable(ScheduleManagement

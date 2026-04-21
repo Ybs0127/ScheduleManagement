@@ -22,9 +22,28 @@
 #include <QTextStream>
 #include <QVBoxLayout>
 #include <algorithm>
+#include <QSettings>
+#include <QApplication>
+#include <QCloseEvent>
+#include <QLabel>
+#include <QIcon>
+#include <QMovie>
+
+class AnimatedIconLabel : public QLabel {
+public:
+    explicit AnimatedIconLabel(const QString &gifPath, QWidget *parent = nullptr) : QLabel(parent) {
+        m_movie = new QMovie(gifPath, QByteArray(), this);
+        setMovie(m_movie);
+        m_movie->jumpToFrame(0); // 처음엔 정지 상태
+    }
+protected:
+    void enterEvent(QEnterEvent *event) override { m_movie->start(); QLabel::enterEvent(event); }
+    void leaveEvent(QEvent *event) override { m_movie->stop(); m_movie->jumpToFrame(0); QLabel::leaveEvent(event); }
+private:
+    QMovie *m_movie;
+};
 
 namespace {
-
 QString csvEscaped(const QString &value)
 {
     QString escaped = value;
@@ -44,6 +63,7 @@ bool scheduleLessThan(const ScheduleItem &left, const ScheduleItem &right)
 
     return left.id < right.id;
 }
+
 
 QString defaultSchedulesFilePath()
 {
@@ -138,7 +158,7 @@ void MainWindow::handleExportRequested(const QString &format)
         if (exportAsCsv(filePath)) {
             QMessageBox::information(this, tr("내보내기 완료!"), tr("일정을 CSV 파일로 내보냈습니다."));
         } else {
-            QMessageBox::warning(this, tr("내보내기 실패ㅠㅠ"), tr("CSV 파일 생성에 실패했습니다."));
+            QMessageBox::warning(this, tr("내보내기 실패"), tr("CSV 파일 생성에 실패했습니다."));
         }
         return;
     }
@@ -156,7 +176,7 @@ void MainWindow::handleExportRequested(const QString &format)
         if(exportAsJson(filePath)){
             QMessageBox::information(this, tr("내보내기 완료!"), tr("일정을 JSON 파일로 내보냈습니다."));
         } else {
-            QMessageBox::warning(this, tr("내보내기 실패ㅠㅠ"), tr("JSON 파일 생성에 실패했습니다."));
+            QMessageBox::warning(this, tr("내보내기 실패"), tr("JSON 파일 생성에 실패했습니다."));
         }
         return;
     }
@@ -188,19 +208,23 @@ void MainWindow::handleImportRequested()
     } else {
         QMessageBox::warning(this, tr("Import failed"), tr("The selected JSON file could not be imported."));
     }
+
 }
 
 void MainWindow::handleSettingsRequested()
 {
-    QMessageBox::information(
-        this,
-        tr("Settings"),
-        tr("Settings UI is intentionally left as a dedicated extension point."));
+
+    QSettings settings("MyCompany", "ScheduleManagement");
+
+    int currentMax = settings.value("calendar/maxVisible", 3).toInt();
+    bool currentWarn = settings.value("data/warnOnEmptyImport", true).toBool();
+
 }
 
 void MainWindow::setupUi()
 {
-    setWindowTitle(tr("Schedule Management"));
+    setWindowIcon(QIcon(":/resources/calander.gif"));
+    setWindowTitle(tr("스케줄러"));
     resize(1240, 760);
 
     auto *central = new QWidget(this);
@@ -223,6 +247,8 @@ void MainWindow::setupUi()
     m_calendarWidget->setMinimumWidth(500);
 
     mainLayout->addLayout(contentLayout, 1);
+
+
 }
 
 void MainWindow::setupMenuBar()
@@ -230,13 +256,17 @@ void MainWindow::setupMenuBar()
     menuBar()->clear();
 
     QMenu *settingsMenu = menuBar()->addMenu(tr("설정"));
+    QMenu *moreMenu = menuBar()->addMenu("더보기");
     QMenu *importMenu = menuBar()->addMenu(tr("불러오기"));
     QMenu *exportMenu = menuBar()->addMenu(tr("내보내기"));
 
     QAction *settingsAction = settingsMenu->addAction(tr("환경설정"));
+    QAction *quitApp = settingsMenu->addAction(tr("종료"));
     QAction *importAction = importMenu->addAction(tr("JSON 불러오기"));
     QAction *exportCsvAction = exportMenu->addAction(tr("CSV로 내보내기"));
     QAction *exportJsonAction = exportMenu->addAction(tr("json으로 내보내기"));
+    // 종료 액션 연결 (애플리케이션 종료)
+    connect(quitApp, &QAction::triggered, this, &MainWindow::handleQuitRequested);
 
     connect(settingsAction, &QAction::triggered, this, &MainWindow::handleSettingsRequested);
     connect(importAction, &QAction::triggered, this, &MainWindow::handleImportRequested);
@@ -545,7 +575,15 @@ bool MainWindow::importFromJson(const QString &filePath)
         return false;
     }
 
-    bool importedAny = false; // 비어 있는 일정 파일은 업로드가 안 됨!
+    if (schedulesArray.isEmpty()) {
+        QSettings settings("MyCompany", "스케줄러");
+        bool shouldWarn = settings.value("data/warnOnEmptyImport", true).toBool();
+
+        if (shouldWarn) {
+            QMessageBox::warning(this, tr("가져오기 경고"), tr("가져올 일정 데이터가 없습니다."));
+        }
+        return false;
+    }
 
     for (const QJsonValue &value : schedulesArray) {
         if (!value.isObject()) {
@@ -574,10 +612,9 @@ bool MainWindow::importFromJson(const QString &filePath)
         item.description = object.value("description").toString();
 
         m_schedules.append(item);
-        importedAny = true;
     }
 
-    return importedAny || schedulesArray.isEmpty();
+    return true;
 }
 
 QString MainWindow::defaultStoragePath() const
@@ -603,4 +640,29 @@ bool MainWindow::loadFromDefaultStorage()
 int MainWindow::generateScheduleId()
 {
     return m_nextScheduleId++;
+}
+void MainWindow::handleQuitRequested()
+{
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this,
+                                  tr("종료 확인"),
+                                  tr("프로그램을 종료하시겠습니까?\n저장되지 않은 변경사항은 사라질 수 있습니다."),
+                                  QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        qApp->quit();
+    }
+}
+void MainWindow::closeEvent(QCloseEvent *event)
+{
+    QMessageBox::StandardButton reply;
+    reply = QMessageBox::question(this, tr("종료 확인"),
+                                  tr("프로그램을 종료하시겠습니까?"),
+                                  QMessageBox::Yes | QMessageBox::No);
+
+    if (reply == QMessageBox::Yes) {
+        event->accept();
+    } else {
+        event->ignore();
+    }
 }

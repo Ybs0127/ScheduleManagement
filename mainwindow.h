@@ -17,6 +17,8 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override = default;
+protected:
+    void closeEvent(QCloseEvent *event) override;
 
 private slots:
     void handleDateSelected(const QDate &date);
@@ -45,6 +47,7 @@ private:
     bool saveToDefaultStorage() const;
     bool loadFromDefaultStorage();
     int generateScheduleId();
+    void handleQuitRequested();
 
     ScheduleListWidget *m_scheduleListWidget;
     CalendarWidget *m_calendarWidget;

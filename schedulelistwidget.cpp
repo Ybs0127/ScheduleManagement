@@ -18,6 +18,52 @@
 #include <utility>
 
 namespace {
+class ScheduleViewerDialog : public QDialog
+{
+public:
+    explicit ScheduleViewerDialog(const ScheduleItem &item, QWidget *parent = nullptr)
+        : QDialog(parent)
+    {
+        setWindowTitle(tr("일정 상세 확인"));
+        resize(400, 300);
+
+        auto *layout = new QVBoxLayout(this);
+        auto *formLayout = new QFormLayout();
+
+        // 1. 시간 표시
+        QString timeStr = QString("%1 %2 ~ %3")
+                              .arg(item.date.toString("yyyy-MM-dd"),
+                                   item.time.toString("HH:mm"),
+                                   item.endDateTime.isValid() ? item.endDateTime.toString("MM-dd HH:mm") : "---");
+
+        auto *timeLabel = new QLabel(timeStr, this);
+        timeLabel->setStyleSheet("font-weight: bold;");
+
+        // 2. 제목 표시
+        auto *titleLabel = new QLabel(item.title, this);
+        titleLabel->setWordWrap(true);
+        titleLabel->setStyleSheet("font-size: 16px; color: #2c3e50; font-weight: bold;");
+
+        // 3. 메모 표시
+        auto *descText = new QPlainTextEdit(this);
+        descText->setPlainText(item.description.isEmpty() ? tr("(메모 없음)") : item.description);
+        descText->setReadOnly(true); // 수정 불가 설정
+        descText->setStyleSheet("background-color: #f9f9f9; border: 1px solid #ddd;");
+
+        formLayout->addRow(tr("일시:"), timeLabel);
+        formLayout->addRow(tr("제목:"), titleLabel);
+        layout->addLayout(formLayout);
+        layout->addWidget(new QLabel(tr("메모:"), this));
+        layout->addWidget(descText);
+
+        // 4. 닫기 버튼
+        auto *closeBtn = new QPushButton(tr("확인"), this);
+        closeBtn->setDefault(true);
+        layout->addWidget(closeBtn);
+
+        connect(closeBtn, &QPushButton::clicked, this, &QDialog::accept);
+    }
+};
 
 class ScheduleEditorDialog : public QDialog
 {
@@ -196,17 +242,30 @@ void ScheduleListWidget::rebuildScheduleItems()
         auto *card = new QWidget(m_listContainer);
         card->setObjectName("ScheduleRowCard");
 
+        //이 카드에 마우스 이벤트를 이 클래스(ScheduleListWidget)가 감시하도록 설정
+        card->installEventFilter(this);
+        //이벤트 필터에서 어떤 아이템인지 식별하기 위해 데이터를 저장해둠
+        card->setProperty("item_id", item.id);
+
         auto *cardLayout = new QVBoxLayout(card);
         cardLayout->setContentsMargins(14, 14, 14, 14);
         cardLayout->setSpacing(10);
 
         // 1. 첫 번째 줄: 일시 정보 (가로로 가득 채움)
-        QString startStr = QDateTime(item.date, item.time).toString("HH:mm");
+        QDateTime startDT(item.date, item.time);
+        QDateTime endDT = item.endDateTime.isValid()
+                              ? item.endDateTime
+                              : startDT.addSecs(3600);
+        QString startStr;
+        QString endStr;
 
-        // 고정된 1시간 추가 대신, 저장된 종료 시간을 사용
-        QString endStr = item.endDateTime.isValid()
-                             ? item.endDateTime.toString("HH:mm")
-                             : QDateTime(item.date, item.time).addSecs(3600).toString("HH:mm");
+        if (startDT.date() == endDT.date()) {
+            startStr = startDT.toString("MM-dd HH:mm");
+            endStr = endDT.toString("HH:mm");
+        } else {
+            startStr = startDT.toString("MM-dd HH:mm");
+            endStr = endDT.toString("MM-dd HH:mm");
+        }
 
         auto *metaLabel = new QLabel(QString("%1 ~ %2").arg(startStr, endStr), card);
         metaLabel->setText(QString("%1 ~ %2").arg(startStr, endStr));
@@ -293,4 +352,23 @@ QString ScheduleListWidget::defaultDateTitle() const
     return m_currentDate.isValid()
         ? tr("%1 일정").arg(QLocale().toString(m_currentDate, "M월 d일 dddd"))
         : tr("Schedules");
+}
+
+bool ScheduleListWidget::eventFilter(QObject *obj, QEvent *event)
+{
+    if (event->type() == QEvent::MouseButtonDblClick) {
+        if (obj->objectName() == "ScheduleRowCard") {
+            int itemId = obj->property("item_id").toInt();
+
+            for (const ScheduleItem &item : m_items) {
+                if (item.id == itemId) {
+                    // --- 여기를 수정: 수정창 대신 확인창 생성 ---
+                    ScheduleViewerDialog viewer(item, this);
+                    viewer.exec();
+                    return true;
+                }
+            }
+        }
+    }
+    return QWidget::eventFilter(obj, event);
 }
