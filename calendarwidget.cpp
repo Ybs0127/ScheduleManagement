@@ -46,6 +46,8 @@ void arrangeCalendarNavigation(QCalendarWidget *calendar)
         return;
     }
 
+    yearButton->setText(QStringLiteral("%1년").arg(calendar->yearShown()));
+
     while (QLayoutItem *item = navigationLayout->takeAt(0)) {
         delete item;
     }
@@ -145,6 +147,7 @@ void CalendarWidget::setSelectedDate(const QDate &date)
     const QSignalBlocker blocker(m_calendar);
     m_calendar->setSelectedDate(date);
     m_calendar->setCurrentPage(date.year(), date.month());
+    arrangeCalendarNavigation(m_calendar);
 }
 
 void CalendarWidget::highlightDates(const QList<QDate> &dates)
@@ -185,7 +188,7 @@ void CalendarWidget::setupUi()
     auto *headerLayout = new QHBoxLayout();
     headerLayout->setSpacing(12);
 
-    auto *titleLabel = new QLabel(tr("Calendar"), card);
+    auto *titleLabel = new QLabel(tr("달력"), card);
     titleLabel->setObjectName("SectionTitle");
 
     m_searchEdit = new QLineEdit(card);
@@ -206,6 +209,8 @@ void CalendarWidget::setupUi()
     m_calendar->setSelectedDate(QDate::currentDate());
     m_calendar->setMinimumHeight(520);
     arrangeCalendarNavigation(m_calendar);
+    connect(m_calendar, &QCalendarWidget::currentPageChanged, this,
+            [this](int, int) { arrangeCalendarNavigation(m_calendar); });
 
     layout->addLayout(headerLayout);
     layout->addWidget(m_calendar, 1);
