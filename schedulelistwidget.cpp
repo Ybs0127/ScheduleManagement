@@ -196,7 +196,7 @@ void ScheduleListWidget::rebuildScheduleItems()
         cardLayout->setSpacing(10);
 
         // 1. 첫 번째 줄: 일시 정보 (가로로 가득 채움)
-        QString startStr = QDateTime(item.date, item.time).toString("yyyy-MM-dd HH:mm");
+        QString startStr = QDateTime(item.date, item.time).toString("HH:mm");
 
         // 고정된 1시간 추가 대신, 저장된 종료 시간을 사용
         QString endStr = item.endDateTime.isValid()
@@ -210,10 +210,6 @@ void ScheduleListWidget::rebuildScheduleItems()
         auto *editButton = new QPushButton(tr("수정"), card);
         auto *deleteButton = new QPushButton(tr("삭제"), card);
 
-        topRow->addWidget(metaLabel, 1);
-        topRow->addWidget(editButton);
-        topRow->addWidget(deleteButton);
-
         auto *titleLabel = new QLabel(item.title, card);
         titleLabel->setObjectName("ScheduleTitle");
         titleLabel->setWordWrap(true);
@@ -222,10 +218,6 @@ void ScheduleListWidget::rebuildScheduleItems()
         // 3. 세 번째 줄: 버튼 전용 레이아웃 (우측 정렬)
         auto *buttonRow = new QHBoxLayout();
         buttonRow->setContentsMargins(0, 4, 0, 0); // 제목과의 간격
-
-        // rebuildScheduleItems 함수 내 버튼 설정 부분 수정
-        auto *editButton = new QPushButton(tr("Edit"), card);
-        auto *deleteButton = new QPushButton(tr("Delete"), card);
 
         // 크기를 고정하는 대신 최소 크기를 지정하고, 사라지지 않게 정책 설정
         editButton->setMinimumSize(60, 26);
