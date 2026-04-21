@@ -52,7 +52,7 @@ public:
 
         m_titleEdit = new QLineEdit(m_item.title, this);
         m_descriptionEdit = new QPlainTextEdit(m_item.description, this);
-        m_descriptionEdit->setPlaceholderText(tr("Optional notes"));
+        m_descriptionEdit->setPlaceholderText(tr("메모"));
         m_descriptionEdit->setFixedHeight(96);
 
         // 폼 레이아웃에 추가
@@ -222,12 +222,6 @@ void ScheduleListWidget::rebuildScheduleItems()
         // 크기를 고정하는 대신 최소 크기를 지정하고, 사라지지 않게 정책 설정
         editButton->setMinimumSize(60, 26);
         deleteButton->setMinimumSize(70, 26); // Delete는 글자가 더 길어서 조금 더 넓게
-
-        auto *descriptionLabel = new QLabel(
-            item.description.isEmpty() ? tr("메모 없음") : item.description,
-            card);
-        descriptionLabel->setObjectName("ScheduleDescription");
-        descriptionLabel->setWordWrap(true);
 
         buttonRow->addStretch(); // 왼쪽을 밀어서 버튼들을 오른쪽으로 정렬
         buttonRow->addWidget(editButton);

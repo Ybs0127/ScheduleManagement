@@ -457,7 +457,7 @@ bool MainWindow::exportAsCsv(const QString &filePath) const
     }
 
     QTextStream stream(&file);
-    stream << "id,date,time,title,description\n";
+    stream << "id,date,time,endDateTime,title,description\n";
 
     QList<ScheduleItem> schedules = m_schedules;
     std::sort(schedules.begin(), schedules.end(), scheduleLessThan);
@@ -466,6 +466,7 @@ bool MainWindow::exportAsCsv(const QString &filePath) const
         stream << item.id << ','
                << csvEscaped(item.date.toString(Qt::ISODate)) << ','
                << csvEscaped(item.time.toString("HH:mm")) << ','
+               << csvEscaped(item.endDateTime.toString("yyyy-MM-dd HH:mm")) << ','
                << csvEscaped(item.title) << ','
                << csvEscaped(item.description) << '\n';
     }
@@ -494,6 +495,7 @@ bool MainWindow::exportAsJson(const QString &filePath) const
         scheduleObject.insert("id", item.id);
         scheduleObject.insert("date", item.date.toString(Qt::ISODate));
         scheduleObject.insert("time", item.time.toString("HH:mm"));
+        scheduleObject.insert("endDateTime", item.endDateTime.toString("yyyy-MM-dd HH:mm"));
         scheduleObject.insert("title", item.title);
         scheduleObject.insert("description", item.description);
         schedulesArray.append(scheduleObject);
@@ -517,8 +519,13 @@ bool MainWindow::importFromJson(const QString &filePath)
         return false;
     }
 
+    const QByteArray jsonData = file.readAll();
+    if (jsonData.trimmed().isEmpty()) {
+        return true;
+    }
+
     QJsonParseError error;
-    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
+    const QJsonDocument document = QJsonDocument::fromJson(jsonData, &error);
     if (error.error != QJsonParseError::NoError || document.isNull()) {
         return false;
     }
@@ -531,13 +538,12 @@ bool MainWindow::importFromJson(const QString &filePath)
         if (!schedulesValue.isArray()) {
             return false;
         }
-
         schedulesArray = schedulesValue.toArray();
     } else {
         return false;
     }
 
-    bool importedAny = false;
+    bool importedAny = false; // 비어 있는 일정 파일은 업로드가 안 됨!
 
     for (const QJsonValue &value : schedulesArray) {
         if (!value.isObject()) {
@@ -547,12 +553,13 @@ bool MainWindow::importFromJson(const QString &filePath)
         const QJsonObject object = value.toObject();
         const QDate date = QDate::fromString(object.value("date").toString(), Qt::ISODate);
         QTime time = QTime::fromString(object.value("time").toString(), "HH:mm");
-        if (!time.isValid()) {
-            time = QTime::fromString(object.value("time").toString(), Qt::ISODate);
-        }
+        if (!time.isValid()) time = QTime(0, 0);
+
+        QDateTime endDateTime = QDateTime::fromString(object.value("endDateTime").toString(), "yyyy-MM-dd HH:mm");
+        if (!endDateTime.isValid()) endDateTime = QDateTime(date, time.addSecs(3600));
 
         const QString title = object.value("title").toString().trimmed();
-        if (!date.isValid() || !time.isValid() || title.isEmpty()) {
+        if (!date.isValid() || title.isEmpty()) {
             continue;
         }
 
@@ -560,6 +567,7 @@ bool MainWindow::importFromJson(const QString &filePath)
         item.id = generateScheduleId();
         item.date = date;
         item.time = time;
+        item.endDateTime = endDateTime;
         item.title = title;
         item.description = object.value("description").toString();
 

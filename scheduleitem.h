@@ -11,7 +11,7 @@ struct ScheduleItem {
     int id = -1;
     QDate date;
     QTime time;
-    QDateTime endDateTime;
+    QDateTime endDateTime; //yyyy-MM-dd HH:mm
     QString title;
     QString description;
 };
