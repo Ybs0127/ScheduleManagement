@@ -2,19 +2,23 @@
 
 #include "calendarwidget.h"
 #include "schedulelistwidget.h"
-#include "toptoolbarwidget.h"
 
+#include <QAction>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QMessageBox>
+#include <QMenu>
+#include <QMenuBar>
 #include <QSaveFile>
 #include <QSet>
+#include <QStandardPaths>
 #include <QTextStream>
 #include <QVBoxLayout>
 #include <algorithm>
@@ -41,19 +45,29 @@ bool scheduleLessThan(const ScheduleItem &left, const ScheduleItem &right)
     return left.id < right.id;
 }
 
+QString defaultSchedulesFilePath()
+{
+    const QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (appDataPath.isEmpty()) {
+        return QDir::home().filePath(".schedulemanagement/schedules.json");
+    }
+    return QDir(appDataPath).filePath("schedules.json");
+}
+
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
-    , m_topToolbarWidget(nullptr)
     , m_scheduleListWidget(nullptr)
     , m_calendarWidget(nullptr)
     , m_selectedDate(QDate::currentDate())
     , m_nextScheduleId(1)
 {
     setupUi();
+    setupMenuBar();
     setupConnections();
     applyStyles();
+    loadFromDefaultStorage();
     refreshScheduleList();
     refreshCalendarHighlights();
 }
@@ -69,6 +83,7 @@ void MainWindow::handleScheduleAdded(const ScheduleItem &item)
     ScheduleItem schedule = item;
     schedule.id = generateScheduleId();
     m_schedules.append(schedule);
+    saveToDefaultStorage();
 
     refreshScheduleList();
     refreshCalendarHighlights();
@@ -79,6 +94,7 @@ void MainWindow::handleScheduleUpdated(const ScheduleItem &item)
     for (ScheduleItem &schedule : m_schedules) {
         if (schedule.id == item.id) {
             schedule = item;
+            saveToDefaultStorage();
             refreshScheduleList();
             refreshCalendarHighlights();
             return;
@@ -95,6 +111,7 @@ void MainWindow::handleScheduleDeleted(int id)
     }
 
     m_schedules.erase(newEnd, m_schedules.end());
+    saveToDefaultStorage();
     refreshScheduleList();
     refreshCalendarHighlights();
 }
@@ -110,7 +127,7 @@ void MainWindow::handleExportRequested(const QString &format)
     if (format.compare("csv", Qt::CaseInsensitive) == 0) {
         const QString filePath = QFileDialog::getSaveFileName(
             this,
-            tr("Export schedules"),
+            tr("일정 내보내기"),
             QDir::homePath() + "/schedules.csv",
             tr("CSV Files (*.csv)"));
 
@@ -119,9 +136,27 @@ void MainWindow::handleExportRequested(const QString &format)
         }
 
         if (exportAsCsv(filePath)) {
-            QMessageBox::information(this, tr("Export complete"), tr("Schedules were exported as CSV."));
+            QMessageBox::information(this, tr("내보내기 완료!"), tr("일정을 CSV 파일로 내보냈습니다."));
         } else {
-            QMessageBox::warning(this, tr("Export failed"), tr("Could not write the CSV file."));
+            QMessageBox::warning(this, tr("내보내기 실패ㅠㅠ"), tr("CSV 파일 생성에 실패했습니다."));
+        }
+        return;
+    }
+    else if (format.compare("json", Qt::CaseInsensitive) == 0) {
+        const QString filePath = QFileDialog::getSaveFileName(
+            this,
+            tr("일정 내보내기"),
+            QDir::homePath() + "/schedules.json",
+            tr("JSON Files (*.json)"));
+
+        if (filePath.isEmpty()) {
+            return;
+        }
+
+        if(exportAsJson(filePath)){
+            QMessageBox::information(this, tr("내보내기 완료!"), tr("일정을 JSON 파일로 내보냈습니다."));
+        } else {
+            QMessageBox::warning(this, tr("내보내기 실패ㅠㅠ"), tr("JSON 파일 생성에 실패했습니다."));
         }
         return;
     }
@@ -146,6 +181,7 @@ void MainWindow::handleImportRequested()
     }
 
     if (importFromJson(filePath)) {
+        saveToDefaultStorage();
         refreshScheduleList();
         refreshCalendarHighlights();
         QMessageBox::information(this, tr("Import complete"), tr("Schedules were imported from JSON."));
@@ -175,7 +211,6 @@ void MainWindow::setupUi()
     mainLayout->setContentsMargins(24, 24, 24, 24);
     mainLayout->setSpacing(18);
 
-    m_topToolbarWidget = new TopToolbarWidget(central);
     m_scheduleListWidget = new ScheduleListWidget(central);
     m_calendarWidget = new CalendarWidget(central);
 
@@ -187,21 +222,34 @@ void MainWindow::setupUi()
     m_scheduleListWidget->setFixedWidth(300);
     m_calendarWidget->setMinimumWidth(500);
 
-    mainLayout->addWidget(m_topToolbarWidget);
     mainLayout->addLayout(contentLayout, 1);
+}
+
+void MainWindow::setupMenuBar()
+{
+    menuBar()->clear();
+
+    QMenu *settingsMenu = menuBar()->addMenu(tr("설정"));
+    QMenu *importMenu = menuBar()->addMenu(tr("불러오기"));
+    QMenu *exportMenu = menuBar()->addMenu(tr("내보내기"));
+
+    QAction *settingsAction = settingsMenu->addAction(tr("환경설정"));
+    QAction *importAction = importMenu->addAction(tr("JSON 불러오기"));
+    QAction *exportCsvAction = exportMenu->addAction(tr("CSV로 내보내기"));
+    QAction *exportJsonAction = exportMenu->addAction(tr("json으로 내보내기"));
+
+    connect(settingsAction, &QAction::triggered, this, &MainWindow::handleSettingsRequested);
+    connect(importAction, &QAction::triggered, this, &MainWindow::handleImportRequested);
+    connect(exportCsvAction, &QAction::triggered, this, [this]() {
+        handleExportRequested(QStringLiteral("csv"));
+    });
+    connect(exportJsonAction, &QAction::triggered, this, [this]() {
+        handleExportRequested(QStringLiteral("json"));
+    });
 }
 
 void MainWindow::setupConnections()
 {
-    connect(m_topToolbarWidget, &TopToolbarWidget::searchRequested,
-            this, &MainWindow::handleSearchRequested);
-    connect(m_topToolbarWidget, &TopToolbarWidget::exportRequested,
-            this, &MainWindow::handleExportRequested);
-    connect(m_topToolbarWidget, &TopToolbarWidget::importRequested,
-            this, &MainWindow::handleImportRequested);
-    connect(m_topToolbarWidget, &TopToolbarWidget::settingsRequested,
-            this, &MainWindow::handleSettingsRequested);
-
     connect(m_scheduleListWidget, &ScheduleListWidget::scheduleAdded,
             this, &MainWindow::handleScheduleAdded);
     connect(m_scheduleListWidget, &ScheduleListWidget::scheduleUpdated,
@@ -211,6 +259,8 @@ void MainWindow::setupConnections()
 
     connect(m_calendarWidget, &CalendarWidget::dateSelected,
             this, &MainWindow::handleDateSelected);
+    connect(m_calendarWidget, &CalendarWidget::searchRequested,
+            this, &MainWindow::handleSearchRequested);
 }
 
 void MainWindow::applyStyles()
@@ -343,7 +393,7 @@ void MainWindow::refreshScheduleList()
     } else {
         visibleSchedules = schedulesMatchingKeyword(m_searchKeyword);
         m_scheduleListWidget->setListTitle(
-            tr("Search results for \"%1\" (%2)").arg(m_searchKeyword).arg(visibleSchedules.size()));
+            tr("\"%1에 대한 검색 결과").arg(m_searchKeyword));
     }
 
     m_scheduleListWidget->updateScheduleList(visibleSchedules);
@@ -423,6 +473,43 @@ bool MainWindow::exportAsCsv(const QString &filePath) const
     return file.commit();
 }
 
+bool MainWindow::exportAsJson(const QString &filePath) const
+{
+    const QString directoryPath = QFileInfo(filePath).absolutePath();
+    if (!directoryPath.isEmpty() && !QDir().mkpath(directoryPath)) {
+        return false;
+    }
+
+    QSaveFile file(filePath);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return false;
+    }
+
+    QList<ScheduleItem> schedules = m_schedules;
+    std::sort(schedules.begin(), schedules.end(), scheduleLessThan);
+
+    QJsonArray schedulesArray;
+    for (const ScheduleItem &item : schedules) {
+        QJsonObject scheduleObject;
+        scheduleObject.insert("id", item.id);
+        scheduleObject.insert("date", item.date.toString(Qt::ISODate));
+        scheduleObject.insert("time", item.time.toString("HH:mm"));
+        scheduleObject.insert("title", item.title);
+        scheduleObject.insert("description", item.description);
+        schedulesArray.append(scheduleObject);
+    }
+
+    QJsonObject rootObject;
+    rootObject.insert("schedules", schedulesArray);
+
+    const QJsonDocument document(rootObject);
+    if (file.write(document.toJson(QJsonDocument::Indented)) == -1) {
+        return false;
+    }
+
+    return file.commit();
+}
+
 bool MainWindow::importFromJson(const QString &filePath)
 {
     QFile file(filePath);
@@ -440,7 +527,12 @@ bool MainWindow::importFromJson(const QString &filePath)
     if (document.isArray()) {
         schedulesArray = document.array();
     } else if (document.isObject()) {
-        schedulesArray = document.object().value("schedules").toArray();
+        const QJsonValue schedulesValue = document.object().value("schedules");
+        if (!schedulesValue.isArray()) {
+            return false;
+        }
+
+        schedulesArray = schedulesValue.toArray();
     } else {
         return false;
     }
@@ -475,7 +567,27 @@ bool MainWindow::importFromJson(const QString &filePath)
         importedAny = true;
     }
 
-    return importedAny;
+    return importedAny || schedulesArray.isEmpty();
+}
+
+QString MainWindow::defaultStoragePath() const
+{
+    return defaultSchedulesFilePath();
+}
+
+bool MainWindow::saveToDefaultStorage() const
+{
+    return exportAsJson(defaultStoragePath());
+}
+
+bool MainWindow::loadFromDefaultStorage()
+{
+    const QString filePath = defaultStoragePath();
+    if (!QFile::exists(filePath)) {
+        return true;
+    }
+
+    return importFromJson(filePath);
 }
 
 int MainWindow::generateScheduleId()

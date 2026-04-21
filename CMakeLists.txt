@@ -14,8 +14,6 @@ set(PROJECT_SOURCES
     main.cpp
     mainwindow.cpp
     mainwindow.h
-    toptoolbarwidget.cpp
-    toptoolbarwidget.h
     schedulelistwidget.cpp
     schedulelistwidget.h
     calendarwidget.cpp

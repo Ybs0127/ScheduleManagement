@@ -27,10 +27,13 @@ public:
         , m_item(initialItem)
     {
         setWindowTitle(m_item.id < 0 ? tr("일정 추가") : tr("일정 수정"));
-        resize(450, 350);
+        resize(420, 280);
 
         auto *layout = new QVBoxLayout(this);
+
         auto *formLayout = new QFormLayout();
+        formLayout->setLabelAlignment(Qt::AlignLeft);
+        formLayout->setFormAlignment(Qt::AlignTop);
 
         // --- 시작 일시 (날짜 + 시간) ---
         // 기존 item.date와 item.time을 합쳐서 QDateTime 생성
@@ -49,21 +52,25 @@ public:
 
         m_titleEdit = new QLineEdit(m_item.title, this);
         m_descriptionEdit = new QPlainTextEdit(m_item.description, this);
-        m_descriptionEdit->setFixedHeight(80);
+        m_descriptionEdit->setPlaceholderText(tr("Optional notes"));
+        m_descriptionEdit->setFixedHeight(96);
 
         // 폼 레이아웃에 추가
         formLayout->addRow(tr("시작 일시"), m_startDateTimeEdit);
         formLayout->addRow(tr("종료 일시"), m_endDateTimeEdit);
         formLayout->addRow(tr("제목"), m_titleEdit);
         formLayout->addRow(tr("메모"), m_descriptionEdit);
-
         auto *buttons = new QDialogButtonBox(QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
+        buttons->button(QDialogButtonBox::Save)->setText(tr("저장"));
+        buttons->button(QDialogButtonBox::Cancel)->setText(tr("취소"));
+
+
         layout->addLayout(formLayout);
         layout->addWidget(buttons);
 
         connect(buttons, &QDialogButtonBox::accepted, this, [this]() {
             if (m_titleEdit->text().trimmed().isEmpty()) {
-                QMessageBox::warning(this, tr("알림"), tr("제목을 입력해주세요."));
+                QMessageBox::warning(this, tr("제목이 없습니다."), tr("일정 제목을 입력해주세요."));
                 return;
             }
 
@@ -77,13 +84,15 @@ public:
             // 3. 기타 정보 저장
             m_item.title = m_titleEdit->text().trimmed();
             m_item.description = m_descriptionEdit->toPlainText().trimmed();
-
             accept();
         });
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
     }
 
-    ScheduleItem item() const { return m_item; }
+    ScheduleItem item() const
+    {
+        return m_item;
+    }
 
 private:
     ScheduleItem m_item;
@@ -98,7 +107,6 @@ private:
 ScheduleListWidget::ScheduleListWidget(QWidget *parent)
     : QWidget(parent)
     , m_titleLabel(nullptr)
-    , m_subtitleLabel(nullptr)
     , m_listContainer(nullptr)
     , m_listLayout(nullptr)
     , m_addButton(nullptr)
@@ -144,8 +152,6 @@ void ScheduleListWidget::setupUi()
     m_titleLabel = new QLabel(card);
     m_titleLabel->setObjectName("SectionTitle");
 
-    m_subtitleLabel = new QLabel(tr("Your day list updates immediately when plans change."), card);
-    m_subtitleLabel->setObjectName("SectionSubtitle");
 
     auto *scrollArea = new QScrollArea(card);
     scrollArea->setWidgetResizable(true);
@@ -158,11 +164,10 @@ void ScheduleListWidget::setupUi()
 
     scrollArea->setWidget(m_listContainer);
 
-    m_addButton = new QPushButton(tr("+ Manual Add"), card);
+    m_addButton = new QPushButton(tr("+ 일정 추가"), card);
     m_addButton->setObjectName("PrimaryButton");
 
     layout->addWidget(m_titleLabel);
-    layout->addWidget(m_subtitleLabel);
     layout->addWidget(scrollArea, 1);
     layout->addWidget(m_addButton);
 
@@ -173,13 +178,22 @@ void ScheduleListWidget::rebuildScheduleItems()
 {
     clearListLayout();
 
+    if (m_items.isEmpty()) {
+        auto *emptyState = new QLabel(tr("현재 일정이 없습니다."), m_listContainer);
+        emptyState->setObjectName("SectionSubtitle");
+        emptyState->setWordWrap(true);
+        m_listLayout->addWidget(emptyState);
+        m_listLayout->addStretch();
+        return;
+    }
+
     for (const ScheduleItem &item : std::as_const(m_items)) {
         auto *card = new QWidget(m_listContainer);
         card->setObjectName("ScheduleRowCard");
 
         auto *cardLayout = new QVBoxLayout(card);
-        cardLayout->setContentsMargins(12, 12, 12, 12);
-        cardLayout->setSpacing(8); // 요소 간 간격
+        cardLayout->setContentsMargins(14, 14, 14, 14);
+        cardLayout->setSpacing(10);
 
         // 1. 첫 번째 줄: 일시 정보 (가로로 가득 채움)
         QString startStr = QDateTime(item.date, item.time).toString("yyyy-MM-dd HH:mm");
@@ -192,9 +206,14 @@ void ScheduleListWidget::rebuildScheduleItems()
         auto *metaLabel = new QLabel(QString("%1 ~ %2").arg(startStr, endStr), card);
         metaLabel->setText(QString("%1 ~ %2").arg(startStr, endStr));
         metaLabel->setObjectName("ScheduleMeta");
-        metaLabel->setStyleSheet("color: #666666; font-size: 11px;");
 
-        // 2. 두 번째 줄: 제목
+        auto *editButton = new QPushButton(tr("수정"), card);
+        auto *deleteButton = new QPushButton(tr("삭제"), card);
+
+        topRow->addWidget(metaLabel, 1);
+        topRow->addWidget(editButton);
+        topRow->addWidget(deleteButton);
+
         auto *titleLabel = new QLabel(item.title, card);
         titleLabel->setObjectName("ScheduleTitle");
         titleLabel->setWordWrap(true);
@@ -212,8 +231,11 @@ void ScheduleListWidget::rebuildScheduleItems()
         editButton->setMinimumSize(60, 26);
         deleteButton->setMinimumSize(70, 26); // Delete는 글자가 더 길어서 조금 더 넓게
 
-        editButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        deleteButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+        auto *descriptionLabel = new QLabel(
+            item.description.isEmpty() ? tr("메모 없음") : item.description,
+            card);
+        descriptionLabel->setObjectName("ScheduleDescription");
+        descriptionLabel->setWordWrap(true);
 
         buttonRow->addStretch(); // 왼쪽을 밀어서 버튼들을 오른쪽으로 정렬
         buttonRow->addWidget(editButton);
@@ -227,13 +249,18 @@ void ScheduleListWidget::rebuildScheduleItems()
         // --- Connect 로직 ---
         connect(editButton, &QPushButton::clicked, this, [this, item]() { openEditDialog(item); });
         connect(deleteButton, &QPushButton::clicked, this, [this, item]() {
-            if (QMessageBox::question(this, tr("삭제"), tr("정말 삭제하시겠습니까?")) == QMessageBox::Yes) {
+            const auto answer = QMessageBox::question(
+                this,
+                tr("일정 삭제"),
+                tr("%1 %2에 있는 \"%3\" 일정을 삭제하시겠습니까?").arg(item.date.toString("yyyy-MM-dd"), item.time.toString("HH:mm"), item.title));
+            if (answer == QMessageBox::Yes) {
                 emit scheduleDeleted(item.id);
             }
         });
 
         m_listLayout->addWidget(card);
     }
+
     m_listLayout->addStretch();
 }
 
@@ -270,6 +297,6 @@ void ScheduleListWidget::clearListLayout()
 QString ScheduleListWidget::defaultDateTitle() const
 {
     return m_currentDate.isValid()
-        ? tr("Schedules for %1").arg(m_currentDate.toString("dddd, MMM d yyyy"))
+        ? tr("%1 일정").arg(QLocale().toString(m_currentDate, "M월 d일 dddd"))
         : tr("Schedules");
 }

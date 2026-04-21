@@ -9,7 +9,6 @@
 
 class CalendarWidget;
 class ScheduleListWidget;
-class TopToolbarWidget;
 
 class MainWindow : public QMainWindow
 {
@@ -31,6 +30,7 @@ private slots:
 
 private:
     void setupUi();
+    void setupMenuBar();
     void setupConnections();
     void applyStyles();
     void refreshScheduleList();
@@ -39,10 +39,13 @@ private:
     QList<ScheduleItem> schedulesMatchingKeyword(const QString &keyword) const;
     QList<QDate> scheduledDates() const;
     bool exportAsCsv(const QString &filePath) const;
+    bool exportAsJson(const QString &filePath) const;
     bool importFromJson(const QString &filePath);
+    QString defaultStoragePath() const;
+    bool saveToDefaultStorage() const;
+    bool loadFromDefaultStorage();
     int generateScheduleId();
 
-    TopToolbarWidget *m_topToolbarWidget;
     ScheduleListWidget *m_scheduleListWidget;
     CalendarWidget *m_calendarWidget;
     QList<ScheduleItem> m_schedules;
