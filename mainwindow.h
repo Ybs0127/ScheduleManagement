@@ -41,6 +41,9 @@ private:
     bool exportAsCsv(const QString &filePath) const;
     bool exportAsJson(const QString &filePath) const;
     bool importFromJson(const QString &filePath);
+    QString defaultStoragePath() const;
+    bool saveToDefaultStorage() const;
+    bool loadFromDefaultStorage();
     int generateScheduleId();
 
     ScheduleListWidget *m_scheduleListWidget;

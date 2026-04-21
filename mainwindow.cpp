@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
+#include <QFileInfo>
 #include <QHBoxLayout>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -17,6 +18,7 @@
 #include <QMenuBar>
 #include <QSaveFile>
 #include <QSet>
+#include <QStandardPaths>
 #include <QTextStream>
 #include <QVBoxLayout>
 #include <algorithm>
@@ -43,6 +45,15 @@ bool scheduleLessThan(const ScheduleItem &left, const ScheduleItem &right)
     return left.id < right.id;
 }
 
+QString defaultSchedulesFilePath()
+{
+    const QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (appDataPath.isEmpty()) {
+        return QDir::home().filePath(".schedulemanagement/schedules.json");
+    }
+    return QDir(appDataPath).filePath("schedules.json");
+}
+
 } // namespace
 
 MainWindow::MainWindow(QWidget *parent)
@@ -56,6 +67,7 @@ MainWindow::MainWindow(QWidget *parent)
     setupMenuBar();
     setupConnections();
     applyStyles();
+    loadFromDefaultStorage();
     refreshScheduleList();
     refreshCalendarHighlights();
 }
@@ -71,6 +83,7 @@ void MainWindow::handleScheduleAdded(const ScheduleItem &item)
     ScheduleItem schedule = item;
     schedule.id = generateScheduleId();
     m_schedules.append(schedule);
+    saveToDefaultStorage();
 
     refreshScheduleList();
     refreshCalendarHighlights();
@@ -81,6 +94,7 @@ void MainWindow::handleScheduleUpdated(const ScheduleItem &item)
     for (ScheduleItem &schedule : m_schedules) {
         if (schedule.id == item.id) {
             schedule = item;
+            saveToDefaultStorage();
             refreshScheduleList();
             refreshCalendarHighlights();
             return;
@@ -97,6 +111,7 @@ void MainWindow::handleScheduleDeleted(int id)
     }
 
     m_schedules.erase(newEnd, m_schedules.end());
+    saveToDefaultStorage();
     refreshScheduleList();
     refreshCalendarHighlights();
 }
@@ -166,6 +181,7 @@ void MainWindow::handleImportRequested()
     }
 
     if (importFromJson(filePath)) {
+        saveToDefaultStorage();
         refreshScheduleList();
         refreshCalendarHighlights();
         QMessageBox::information(this, tr("Import complete"), tr("Schedules were imported from JSON."));
@@ -459,6 +475,11 @@ bool MainWindow::exportAsCsv(const QString &filePath) const
 
 bool MainWindow::exportAsJson(const QString &filePath) const
 {
+    const QString directoryPath = QFileInfo(filePath).absolutePath();
+    if (!directoryPath.isEmpty() && !QDir().mkpath(directoryPath)) {
+        return false;
+    }
+
     QSaveFile file(filePath);
     if (!file.open(QIODevice::WriteOnly)) {
         return false;
@@ -506,7 +527,12 @@ bool MainWindow::importFromJson(const QString &filePath)
     if (document.isArray()) {
         schedulesArray = document.array();
     } else if (document.isObject()) {
-        schedulesArray = document.object().value("schedules").toArray();
+        const QJsonValue schedulesValue = document.object().value("schedules");
+        if (!schedulesValue.isArray()) {
+            return false;
+        }
+
+        schedulesArray = schedulesValue.toArray();
     } else {
         return false;
     }
@@ -541,7 +567,27 @@ bool MainWindow::importFromJson(const QString &filePath)
         importedAny = true;
     }
 
-    return importedAny;
+    return importedAny || schedulesArray.isEmpty();
+}
+
+QString MainWindow::defaultStoragePath() const
+{
+    return defaultSchedulesFilePath();
+}
+
+bool MainWindow::saveToDefaultStorage() const
+{
+    return exportAsJson(defaultStoragePath());
+}
+
+bool MainWindow::loadFromDefaultStorage()
+{
+    const QString filePath = defaultStoragePath();
+    if (!QFile::exists(filePath)) {
+        return true;
+    }
+
+    return importFromJson(filePath);
 }
 
 int MainWindow::generateScheduleId()
