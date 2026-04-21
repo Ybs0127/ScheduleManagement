@@ -215,6 +215,9 @@ void ScheduleListWidget::rebuildScheduleItems()
         titleLabel->setWordWrap(true);
         titleLabel->setStyleSheet("font-weight: bold; font-size: 14px;");
 
+        //QHBoxLayout *buttonRow = new QHBoxLayout();
+
+
         // 3. 세 번째 줄: 버튼 전용 레이아웃 (우측 정렬)
         auto *buttonRow = new QHBoxLayout();
         buttonRow->setContentsMargins(0, 4, 0, 0); // 제목과의 간격

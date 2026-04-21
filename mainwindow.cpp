@@ -519,13 +519,8 @@ bool MainWindow::importFromJson(const QString &filePath)
         return false;
     }
 
-    const QByteArray jsonData = file.readAll();
-    if (jsonData.trimmed().isEmpty()) {
-        return true;
-    }
-
     QJsonParseError error;
-    const QJsonDocument document = QJsonDocument::fromJson(jsonData, &error);
+    const QJsonDocument document = QJsonDocument::fromJson(file.readAll(), &error);
     if (error.error != QJsonParseError::NoError || document.isNull()) {
         return false;
     }
