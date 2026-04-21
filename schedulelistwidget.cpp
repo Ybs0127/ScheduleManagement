@@ -57,7 +57,7 @@ public:
 
         m_titleEdit = new QLineEdit(m_item.title, this);
         m_descriptionEdit = new QPlainTextEdit(m_item.description, this);
-        m_descriptionEdit->setPlaceholderText(tr("Optional notes"));
+        m_descriptionEdit->setPlaceholderText(tr("메모"));
         m_descriptionEdit->setFixedHeight(96);
 
         // 폼 레이아웃에 추가
@@ -79,17 +79,16 @@ public:
                 return;
             }
 
-            // 1. 시작 정보 저장
+            // 1. 시작 일시 저장
             m_item.date = m_startDateTimeEdit->date();
             m_item.time = m_startDateTimeEdit->time();
 
-            // 2. 종료 정보 저장 (입력창에서 날짜/시간 통째로 긁어오기)
+            // 2. 종료 일시 저장 (추가된 부분)
             m_item.endDateTime = m_endDateTimeEdit->dateTime();
 
-            // 3. 기타 정보
+            // 3. 기타 정보 저장
             m_item.title = m_titleEdit->text().trimmed();
             m_item.description = m_descriptionEdit->toPlainText().trimmed();
-
             accept();
         });
         connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -228,12 +227,6 @@ void ScheduleListWidget::rebuildScheduleItems()
         // 크기를 고정하는 대신 최소 크기를 지정하고, 사라지지 않게 정책 설정
         editButton->setMinimumSize(60, 26);
         deleteButton->setMinimumSize(70, 26); // Delete는 글자가 더 길어서 조금 더 넓게
-
-        // auto *descriptionLabel = new QLabel(
-        //     item.description.isEmpty() ? tr("메모 없음") : item.description,
-        //     card);
-        // descriptionLabel->setObjectName("ScheduleDescription");
-        // descriptionLabel->setWordWrap(true);
 
         buttonRow->addStretch(); // 왼쪽을 밀어서 버튼들을 오른쪽으로 정렬
         buttonRow->addWidget(editButton);
