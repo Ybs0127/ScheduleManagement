@@ -22,6 +22,8 @@ signals:
     void scheduleAdded(const ScheduleItem &item);
     void scheduleUpdated(const ScheduleItem &item);
     void scheduleDeleted(int id);
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 public slots:
     void setDate(const QDate &date);

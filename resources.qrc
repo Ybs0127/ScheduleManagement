@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/calander.gif</file>
+    </qresource>
+</RCC>
