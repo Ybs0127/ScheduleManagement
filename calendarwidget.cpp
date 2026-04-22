@@ -193,8 +193,8 @@ void CalendarWidget::setupUi()
 
     m_searchEdit = new QLineEdit(card);
     m_searchEdit->setPlaceholderText(tr("일정 검색"));
-    QAction *searchIconAction = m_searchEdit->addAction(QIcon::fromTheme("edit-find"),
-                                                        QLineEdit::LeadingPosition);
+    QIcon searchIcon(":/resources/readingglasses.png");
+    QAction *searchIconAction = m_searchEdit->addAction(searchIcon, QLineEdit::LeadingPosition);
     searchIconAction->setEnabled(true);
     m_searchEdit->setClearButtonEnabled(true);
     m_searchEdit->setMaximumWidth(600);

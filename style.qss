@@ -80,6 +80,22 @@ QLabel#ScheduleDescription {
     color: #6f7f95;
     font-size: 12px;
 }
+#ScheduleMainFrame {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+#ScheduleMainFrame QScrollArea,
+#ScheduleMainFrame QScrollArea > QWidget,
+#ScheduleMainFrame QScrollArea > QWidget > QWidget {
+    background-color: transparent;
+    border: none;
+}
+
+#ScheduleMainFrame QLabel {
+    background-color: transparent;
+}
 QCalendarWidget QWidget {
     alternate-background-color: #ffffff;
 }
