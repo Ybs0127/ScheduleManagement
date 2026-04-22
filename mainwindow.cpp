@@ -326,7 +326,7 @@ void MainWindow::refreshScheduleList()
     } else {
         visibleSchedules = schedulesMatchingKeyword(m_searchKeyword);
         m_scheduleListWidget->setListTitle(
-            tr("\"%1에 대한 검색 결과").arg(m_searchKeyword));
+            tr("\"%1\"에 대한 검색 결과").arg(m_searchKeyword));
     }
 
     m_scheduleListWidget->updateScheduleList(visibleSchedules);
