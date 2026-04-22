@@ -23,7 +23,6 @@
 #include <algorithm>
 #include <QSettings>
 #include <QApplication>
-#include <QCloseEvent>
 #include <QLabel>
 #include <QIcon>
 #include <QMovie>
@@ -545,19 +544,6 @@ int MainWindow::generateScheduleId()
 void MainWindow::handleQuitRequested()
 {
     this->close();
-}
-void MainWindow::closeEvent(QCloseEvent *event)
-{
-    QMessageBox::StandardButton reply;
-    reply = QMessageBox::question(this, tr("종료 확인"),
-                                  tr("프로그램을 종료하시겠습니까?"),
-                                  QMessageBox::Yes | QMessageBox::No);
-
-    if (reply == QMessageBox::Yes) {
-        event->accept();
-    } else {
-        event->ignore();
-    }
 }
 void MainWindow::handleResetRequested()
 {
