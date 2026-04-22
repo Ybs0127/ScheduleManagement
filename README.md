@@ -1,43 +1,78 @@
-# ScheduleManagement
-VEDA Mini Project_1
+## 1. 요구사항 분석
 
-## Event Function Naming Guide
+### 1.1 기능 요구사항 (Functional Requirements)
 
-### Recommended Convention
+| ID | 기능 분류 | 기능 설명 | 우선순위 |
+| --- | --- | --- | --- |
+| F-01 | **캘린더 뷰** | 월 단위 달력 표시, 이전/다음 달 이동, 연/월 표시 | 상 |
+| F-02 | **날짜 선택** | 특정 날짜 클릭 시 해당 날짜 일정 목록 로드 | 상 |
+| F-03 | **일정 표시** | 일정이 있는 날짜 강조 표시, 카드형 리스트 뷰 제공 | 상 |
+| F-04 | **일정 추가** | 날짜, 시각(시작/종료), 제목, 메모 입력을 통한 일정 생성 | 상 |
+| F-05 | **일정 수정/삭제** | 기존 일정의 정보 수정 및 삭제 기능 제공 | 상 |
+| F-06 | **일정 검색** | 제목 또는 메모 키워드 기반 검색 기능 | 중 |
+| F-07 | **데이터 입출력** | JSON 저장/불러오기(백업), CSV 내보내기(공유) | 중 |
+| F-08 | **설정 저장** | QSettings를 이용한 앱 설정(경고 여부 등) 저장 | 하 |
 
-- Functions that open UI widgets: `show...Widget()`
-- Functions that process data: `addEvent()`, `editEvent()`, `deleteEvent()`, `searchEvent()`
-- Main window slots and handlers: `handle...()`
+### 1.2 비기능 요구사항 (Non-Functional Requirements)
 
-### Feature-Based Function Names
+- **UI/UX:** macOS 네이티브 메뉴바 활용, 직관적인 레이아웃(좌측: 상세/우측: 달력).
+- **성능:** 데이터 로딩 시 지연 시간 1초 이내, 부드러운 화면 전환.
+- **호환성:** Windows, macOS, Linux 환경에서 실행 가능 (Qt 프레임워크 활용).
+- **데이터 무결성:** 비정상 종료 시에도 마지막 저장 상태 유지.
 
-1. Add
-- Open widget: `showAddEventWidget()`
-- Process add: `addEvent()`
-- Cancel: `cancelAddEvent()`
+---
 
-2. Edit
-- Open widget: `showEditEventWidget(int eventId)`
-- Process edit: `editEvent()`
-- Cancel: `cancelEditEvent()`
+## 2. 시스템 설계 및 기술 스택
 
-3. Delete
-- Open delete confirmation widget: `showDeleteEventWidget(int eventId)`
-- Process delete: `deleteEvent(int eventId)`
-- Cancel: `cancelDeleteEvent()`
+### 2.1 개발 환경
 
-4. Search
-- Open search widget: `showSearchEventWidget()`
-- Process search: `searchEvent(const QString &eventName)`
-- Cancel: `cancelSearchEvent()`
+- **프레임워크:** Qt (Qt Widgets)
+- **언어:** C++
+- **편집기:** Qt Creator / Visual Studio Code
+- **빌드 시스템:** CMake, Qt Creator에서 빌드
 
-### Mapping to Current Code
+### 2.2 데이터 구조
 
-- `MainWindow::handleScheduleAdded(...)` -> `handleAddEvent(...)`
-- `MainWindow::handleScheduleUpdated(...)` -> `handleEditEvent(...)`
-- `MainWindow::handleScheduleDeleted(int id)` -> `handleDeleteEvent(int id)`
-- `MainWindow::handleSearchRequested(...)` -> `handleSearchEvent(...)`
+- 일정 데이터는 구조체를 활용. 별도의 헤더파일에서 정의
+- **스키마 예시:**
+    
+    ```json
+    struct ScheduleItem {
+        int id = -1;
+        QDate date;
+        QTime time;
+        QDateTime endDateTime; //yyyy-MM-dd HH:mm
+        QString title;
+        QString description;
+    };
+    ```
+    
 
-- `ScheduleListWidget::openCreateDialog()` -> `showAddEventWidget()`
-- `ScheduleListWidget::openEditDialog(...)` -> `showEditEventWidget(...)`
-- Delete confirmation `QMessageBox` section -> `showDeleteEventWidget(...)`
+### **2.3 코드 작성 규칙**
+
+### **2.3.1 일관성 있는 Coding Convention**
+
+- **역할 분리 원칙:** UI 구성, 데이터 처리, 이벤트 처리 로직을 분리하여 클래스와 함수의 책임을 명확히 구분한다.
+- **UI 관련 코드:** 위젯 생성, 레이아웃 배치, 화면 초기화 코드는 `setupUi`와 같은 함수로 분리하여 관리한다.
+- **Signal/Slot 연결:** 사용자 액션과 위젯 이벤트 연결은 `connect()` 또는 생성자 내부의 연결 블록에서 일관되게 처리한다.
+- **데이터 처리 함수 분리:** 파일 저장/불러오기, 일정 검색, 일정 목록 갱신 등은 UI 코드와 분리된 관리 클래스에서 담당하도록 설계한다. Handler 함수들을 통해 클래스 간의 시그널을 관리한다.
+- **중복 코드 최소화:** 반복되는 동작은 공통 함수로 추출하여 유지보수성을 높인다.
+- **주석 작성 기준:** 복잡한 로직, 데이터 흐름, 예외 처리 부분에는 간단한 설명 주석을 추가하되, 단순한 코드에는 불필요한 주석을 지양한다.
+
+### **2.3.2 변수 및 클래스, 함수 Naming Convention**
+
+- **클래스/구조체명:** PascalCase 사용예) `ScheduleItem`, `ScheduleManager`, `MainWindow`
+- **함수명:** camelCase 사용예) `loadSchedules()`, `saveToJson()`, `updateCalendarView()`
+- **변수명:** camelCase 사용예) `selectedDate`, `scheduleList`, `searchKeyword`
+- **상수명:** 대문자 스네이크 표기 또는 `constexpr` 기반 상수명 사용예) `MAX_SCHEDULE_COUNT`, `DEFAULT_WINDOW_WIDTH`
+- **파일명:** 클래스명과 연관된 소문자 또는 PascalCase 기준으로 통일하여 관리
+- **의미 없는 축약어 사용 지양:** 변수와 함수 이름만 보고 역할을 파악할 수 있도록 작성
+
+### **2.3.3 클래스 레벨 설명**
+
+- 모든 주요 클래스에는 **클래스 단위 설명 주석**을 작성하여 책임과 역할을 명확히 기술한다.
+- 클래스 설명에는 다음 내용을 포함한다.
+- **클래스의 목적:** 해당 클래스가 담당하는 기능과 사용 위치
+- **주요 변수 설명:** 클래스 내부 핵심 멤버 변수의 의미와 저장 데이터
+- **주요 함수 설명:** 외부에 제공하는 주요 메서드의 역할, 입력값, 처리 내용
+- 이를 통해 유지보수 시 클래스 구조를 빠르게 이해하고, 팀원 간 협업 효율을 높인다.
