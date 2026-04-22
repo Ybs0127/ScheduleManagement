@@ -198,6 +198,7 @@ void CalendarWidget::setupUi()
     searchIconAction->setEnabled(true);
     m_searchEdit->setClearButtonEnabled(true);
     m_searchEdit->setMaximumWidth(600);
+3
 
     headerLayout->addWidget(titleLabel);
     headerLayout->addStretch();
