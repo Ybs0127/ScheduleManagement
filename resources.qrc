@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/">
+        <file>resources/calander.gif</file>
+        <file>style.qss</file>
+        <file>resources/readingglasses.png</file>
+    </qresource>
+</RCC>
