@@ -27,7 +27,7 @@ private slots:
     void handleScheduleDeleted(int id);
     void handleSearchRequested(const QString &keyword);
     void handleExportRequested(const QString &format);
-    void handleImportRequested();
+    void handleImportRequested(bool overwrite);
     void handleSettingsRequested();
     void handleQuitRequested();
     void handleResetRequested();
@@ -44,10 +44,10 @@ private:
     QList<QDate> scheduledDates() const;
     bool exportAsCsv(const QString &filePath) const;
     bool exportAsJson(const QString &filePath) const;
-    bool importFromJson(const QString &filePath);
+    bool importFromJson(const QString &filePath, bool overwrite = false, bool initialize = false);
     QString defaultStoragePath() const;
     bool saveToDefaultStorage() const;
-    bool loadFromDefaultStorage();
+    bool loadFromDefaultStorage(bool initialize = false);
     int generateScheduleId();
 
 

@@ -72,7 +72,7 @@ MainWindow::MainWindow(QWidget *parent)
     setupMenuBar();
     setupConnections();
     applyStyles();
-    loadFromDefaultStorage();
+    loadFromDefaultStorage(true);
     refreshScheduleList();
     refreshCalendarHighlights();
 }
@@ -173,7 +173,7 @@ void MainWindow::handleExportRequested(const QString &format)
             .arg(format.toUpper()));
 }
 
-void MainWindow::handleImportRequested()
+void MainWindow::handleImportRequested(bool overwrite)
 {
     const QString filePath = QFileDialog::getOpenFileName(
         this,
@@ -185,7 +185,7 @@ void MainWindow::handleImportRequested()
         return;
     }
 
-    if (importFromJson(filePath)) {
+    if (importFromJson(filePath, overwrite)) {
         saveToDefaultStorage();
         refreshScheduleList();
         refreshCalendarHighlights();
@@ -264,16 +264,22 @@ void MainWindow::setupMenuBar()
 
     QAction *settingsAction = settingsMenu->addAction(tr("환경설정"));
     QAction *resetAction = settingsMenu->addAction(tr("일정 초기화"));
-    QAction *importAction = importMenu->addAction(tr("JSON 불러오기"));
+    QAction *importOverwriteAction = importMenu->addAction(tr("일정 덮어쓰기"));
+    QAction *importAppendAction = importMenu->addAction(tr("일정 추가하기"));
+    QAction *exportJsonAction = exportMenu->addAction(tr("JSON으로 내보내기"));
     QAction *exportCsvAction = exportMenu->addAction(tr("CSV로 내보내기"));
-    QAction *exportJsonAction = exportMenu->addAction(tr("json으로 내보내기"));
     QAction *quitApp = moreMenu->addAction(tr("종료"));
 
     // 종료 액션 연결 (애플리케이션 종료)
     connect(quitApp, &QAction::triggered, this, &MainWindow::handleQuitRequested);
     connect(resetAction, &QAction::triggered, this, &MainWindow::handleResetRequested);
     connect(settingsAction, &QAction::triggered, this, &MainWindow::handleSettingsRequested);
-    connect(importAction, &QAction::triggered, this, &MainWindow::handleImportRequested);
+    connect(importOverwriteAction, &QAction::triggered, this, [this]() {
+        handleImportRequested(true);
+    });
+    connect(importAppendAction, &QAction::triggered, this, [this]() {
+        handleImportRequested(false);
+    });
     connect(exportCsvAction, &QAction::triggered, this, [this]() {
         handleExportRequested(QStringLiteral("csv"));
     });
@@ -440,7 +446,7 @@ bool MainWindow::exportAsJson(const QString &filePath) const
     return file.commit();
 }
 
-bool MainWindow::importFromJson(const QString &filePath)
+bool MainWindow::importFromJson(const QString &filePath, bool overwrite, bool initialize)
 {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
@@ -469,10 +475,15 @@ bool MainWindow::importFromJson(const QString &filePath)
     if (schedulesArray.isEmpty()) {
         QSettings settings("MyCompany", "ScheduleManagement");
         bool shouldWarn = settings.value("data/warnOnEmptyImport", true).toBool();
-        if (settings.value("data/warnOnEmptyImport", true).toBool()) {
+        if (settings.value("data/warnOnEmptyImport", true).toBool() && !initialize) {
             QMessageBox::warning(this, tr("가져오기 경고"), tr("가져올 일정 데이터가 없습니다."));
         }
         return false;
+    }
+
+    if (overwrite) {
+        m_schedules.clear();
+        m_nextScheduleId = 1;
     }
 
     for (const QJsonValue &value : schedulesArray) {
@@ -517,14 +528,14 @@ bool MainWindow::saveToDefaultStorage() const
     return exportAsJson(defaultStoragePath());
 }
 
-bool MainWindow::loadFromDefaultStorage()
+bool MainWindow::loadFromDefaultStorage(bool initialize)
 {
     const QString filePath = defaultStoragePath();
     if (!QFile::exists(filePath)) {
         return true;
     }
 
-    return importFromJson(filePath);
+    return importFromJson(filePath, false, initialize);
 }
 
 int MainWindow::generateScheduleId()
