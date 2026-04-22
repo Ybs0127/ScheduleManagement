@@ -195,7 +195,7 @@ void ScheduleListWidget::setupUi()
     auto *card = new QFrame(this);
     card->setProperty("card", true);
     outerLayout->addWidget(card);
-
+    card->setObjectName("ScheduleMainFrame");
     auto *layout = new QVBoxLayout(card);
     layout->setContentsMargins(18, 18, 18, 18);
     layout->setSpacing(14);
